@@ -35,6 +35,12 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # Gọi REST API của backend Spring Boot (interceptor JWT, timeout, xử lý mã lỗi HTTP).
+  dio: ^5.9.1
+
+  # Quản lý state cho các màn hình Quản lý từ.
+  provider: ^6.1.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
