@@ -130,14 +130,19 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
   ```
 
 * **Chạy kết nối Backend Spring Boot thật:**
-  * Với Android Emulator (`10.0.2.2` trỏ về localhost máy chủ):
+  * Với Backend qua Cloudflare Tunnel (chạy trên Chrome):
+    ```bash
+    flutter run -d chrome --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://flooring-partners-surely-developer.trycloudflare.com
+    ```
+  * Với Backend qua Cloudflare Tunnel (chạy trên Máy ảo Android):
+    ```bash
+    flutter run -d android --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://flooring-partners-surely-developer.trycloudflare.com
+    ```
+  * Với Android Emulator nội bộ (`10.0.2.2` trỏ về localhost máy chủ):
     ```bash
     flutter run --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=http://10.0.2.2:8080
     ```
-  * Với thiết bị thật qua mạng LAN:
-    ```bash
-    flutter run --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=http://192.168.1.x:8080
-    ```
+  * Hoặc nhấp đúp chạy nhanh file kịch bản có sẵn: [`run_chrome.bat`](file:///c:/Users/dell/Documents/PTUD/l_english/run_chrome.bat) hoặc [`run_emulator.bat`](file:///c:/Users/dell/Documents/PTUD/l_english/run_emulator.bat).
 
 ### 5.2. Kiểm tra mã nguồn & Chạy kiểm thử tự động
 
