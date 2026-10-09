@@ -132,11 +132,11 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
 * **Chạy kết nối Backend Spring Boot thật:**
   * Với Backend qua Cloudflare Tunnel (chạy trên Chrome):
     ```bash
-    flutter run -d chrome --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://flooring-partners-surely-developer.trycloudflare.com
+    flutter run -d chrome --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://neighborhood-compliance-gratis-sensors.trycloudflare.com
     ```
   * Với Backend qua Cloudflare Tunnel (chạy trên Máy ảo Android):
     ```bash
-    flutter run -d android --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://flooring-partners-surely-developer.trycloudflare.com
+    flutter run -d android --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://neighborhood-compliance-gratis-sensors.trycloudflare.com
     ```
   * Với Android Emulator nội bộ (`10.0.2.2` trỏ về localhost máy chủ):
     ```bash
@@ -149,9 +149,9 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
 Dự án duy trì tiêu chuẩn kiểm thử khắt khe:
 ```powershell
 # 1. Phân tích cú pháp và quy chuẩn (yêu cầu: 0 lỗi, 0 cảnh báo)
-flutter analyze
+flutter analyze --no-pub
 
-# 2. Chạy toàn bộ 71 bài kiểm thử tự động (Unit test, Model test, Controller test, Widget test)
+# 2. Chạy toàn bộ 72 bài kiểm thử tự động (Unit test, Model test, Controller test, Widget test)
 $env:NO_PROXY="localhost,127.0.0.1"; flutter test --no-pub
 ```
 

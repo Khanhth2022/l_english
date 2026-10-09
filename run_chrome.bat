@@ -1,6 +1,6 @@
 @echo off
 title Chay LEnglish tren Chrome (Tat CORS Dev Mode)
-set BACKEND_URL=https://flooring-partners-surely-developer.trycloudflare.com
+set BACKEND_URL=https://neighborhood-compliance-gratis-sensors.trycloudflare.com
 if not "%~1"=="" set BACKEND_URL=%~1
 echo Dang khoi chay LEnglish tren Google Chrome (Disable CORS Web Security)
 echo Backend URL: %BACKEND_URL%
