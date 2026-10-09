@@ -3,12 +3,13 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/safe_change_notifier.dart';
 import '../data/models/phrase_models.dart';
 import '../data/phrase_api.dart';
 
 enum PhraseListStatus { idle, loading, success, failure }
 
-class PhraseListController extends ChangeNotifier {
+class PhraseListController extends ChangeNotifier with SafeChangeNotifier {
   PhraseListController(this._api);
 
   final PhraseApi _api;

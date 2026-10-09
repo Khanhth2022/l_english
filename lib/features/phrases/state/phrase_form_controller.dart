@@ -1,10 +1,11 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/safe_change_notifier.dart';
 import '../data/models/phrase_models.dart';
 import '../data/phrase_api.dart';
 
-class PhraseFormController extends ChangeNotifier {
+class PhraseFormController extends ChangeNotifier with SafeChangeNotifier {
   PhraseFormController(this._api);
 
   final PhraseApi _api;

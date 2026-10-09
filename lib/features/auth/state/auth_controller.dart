@@ -2,9 +2,10 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/auth/token_store.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/safe_change_notifier.dart';
 import '../data/auth_api.dart';
 
-class AuthController extends ChangeNotifier {
+class AuthController extends ChangeNotifier with SafeChangeNotifier {
   AuthController({required this.api, required this.tokenStore});
 
   final AuthApi api;

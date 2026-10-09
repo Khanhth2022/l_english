@@ -59,5 +59,16 @@ void main() {
       expect(error, isNull);
       expect(listController.phrases.length, initialCount - 1);
     });
+
+    test('Gọi dispose() trước hoặc trong khi chấm điểm không văng exception', () async {
+      formController.setText('This is a valid sentence to test dispose safely.');
+      formController.dispose();
+      expect(formController.isDisposed, isTrue);
+
+      // notifyListeners() sau dispose phải được bỏ qua một cách an toàn mà không throw
+      expect(() => formController.notifyListeners(), returnsNormally);
+      final result = await formController.submitForGrading();
+      expect(result, isNotNull);
+    });
   });
 }

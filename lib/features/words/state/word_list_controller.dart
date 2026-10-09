@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/safe_change_notifier.dart';
 import '../data/models/word.dart';
 import '../data/word_api.dart';
 
@@ -12,7 +13,7 @@ enum LoadStatus { idle, loading, success, failure }
 ///
 /// Tài liệu thiết kế: danh sách từ chỉ tải một lần, tab "Ôn tập" lọc lại trên
 /// chính dữ liệu đã tải (`next_review <= now`) nên không có API riêng.
-class WordListController extends ChangeNotifier {
+class WordListController extends ChangeNotifier with SafeChangeNotifier {
   WordListController(this._api, {DateTime Function()? clock})
     : _clock = clock ?? DateTime.now;
 

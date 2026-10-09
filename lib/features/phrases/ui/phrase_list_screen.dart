@@ -30,6 +30,7 @@ class PhraseListScreen extends StatelessWidget {
       ),
       body: _buildBody(context, controller),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'phrase_list_fab',
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(

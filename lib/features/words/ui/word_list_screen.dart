@@ -214,6 +214,7 @@ class _WordListViewState extends State<_WordListView>
   Widget? _buildFab(BuildContext context, WordListController controller) {
     if (!controller.onlyDue) {
       return FloatingActionButton.extended(
+        heroTag: 'word_list_add_fab',
         onPressed: () => _openForm(context, controller, null),
         icon: const Icon(Icons.add),
         label: const Text('Thêm từ'),
@@ -221,6 +222,7 @@ class _WordListViewState extends State<_WordListView>
     }
     if (controller.selectedCount == 0) return null;
     return FloatingActionButton.extended(
+      heroTag: 'word_list_review_fab',
       onPressed: controller.submitting
           ? null
           : () => _confirmReview(context, controller),

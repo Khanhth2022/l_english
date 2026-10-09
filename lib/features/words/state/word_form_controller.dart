@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/safe_change_notifier.dart';
 import '../data/models/enums.dart';
 import '../data/models/word.dart';
 import '../data/models/word_draft.dart';
@@ -69,7 +70,7 @@ class WordValueRow {
 }
 
 /// State của màn hình Thêm/Sửa từ.
-class WordFormController extends ChangeNotifier {
+class WordFormController extends ChangeNotifier with SafeChangeNotifier {
   WordFormController({required this.api, Word? existing})
     : _existing = existing {
     englishController.text = existing?.english ?? '';
