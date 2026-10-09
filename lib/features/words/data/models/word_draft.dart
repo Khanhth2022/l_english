@@ -1,8 +1,10 @@
+import '../json_utils.dart';
 import 'enums.dart';
 import 'word.dart';
 import 'word_value.dart';
 
-/// Dữ liệu form Thêm/Sửa từ gửi lên `POST /api/words` và `PUT /api/words/{id}`.
+/// Dữ liệu form Thêm/Sửa từ gửi lên `POST /api/words` và `PUT /api/words/{id}`,
+/// cũng như cấu trúc từ AI sinh ra trong `POST /api/words/generate-topic`.
 class WordDraft {
   const WordDraft({required this.english, this.level, this.values = const []});
 
@@ -15,6 +17,12 @@ class WordDraft {
     english: word.english,
     level: word.level,
     values: word.values,
+  );
+
+  factory WordDraft.fromJson(Map<String, dynamic> json) => WordDraft(
+    english: asString(json['english']),
+    level: Level.tryParse(json['level']),
+    values: asMapList(json['values']).map(WordValue.fromJson).toList(),
   );
 
   Map<String, dynamic> toJson() => {

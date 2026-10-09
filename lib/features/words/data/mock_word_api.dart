@@ -179,6 +179,67 @@ class MockWordApi implements WordApi {
     }
   }
 
+  @override
+  Future<int> fetchDueCount() async {
+    await _delay();
+    final now = DateTime.now();
+    return _words.values.where((w) => w.isDue(now)).length;
+  }
+
+  @override
+  Future<List<WordDraft>> generateTopicWords(String topic) async {
+    await _delay();
+    final cleanTopic = topic.trim();
+    if (cleanTopic.isEmpty) {
+      throw ApiException(400, 'Chủ đề không được để trống.');
+    }
+    if (simulateAiFailure) {
+      throw ApiException(502, 'Dịch vụ AI tạm thời không khả dụng.');
+    }
+
+    final existingEnglish = _words.values.map((w) => w.english.toLowerCase()).toSet();
+    final bank = _getTopicWordBank(cleanTopic);
+    final candidates = bank.where((draft) => !existingEnglish.contains(draft.english.toLowerCase())).take(10).toList();
+
+    for (final draft in candidates) {
+      _wordCache[draft.english.toLowerCase()] = draft.values;
+    }
+    return candidates;
+  }
+
+  @override
+  Future<List<Word>> confirmTopicWords(List<WordDraft> words) async {
+    await _delay();
+    if (words.isEmpty) {
+      throw ApiException(400, 'Danh sách từ không được để trống.');
+    }
+    if (words.length > 20) {
+      throw ApiException(400, 'Chỉ được thêm tối đa 20 từ mỗi lần.');
+    }
+
+    final now = DateTime.now();
+    final addedWords = <Word>[];
+    for (final draft in words) {
+      final english = draft.english.trim();
+      if (_findByEnglish(english) != null) continue;
+
+      final id = _nextId++;
+      final word = Word(
+        id: id,
+        english: english,
+        level: draft.level,
+        reviewCount: 0,
+        nextReview: now,
+        createdAt: now,
+        updatedAt: now,
+        values: _cleanValues(draft.values),
+      );
+      _words[id] = word;
+      addedWords.add(word);
+    }
+    return addedWords;
+  }
+
   // ------------------------------------------------------------------ Nội bộ
 
   Future<void> _delay() async {
@@ -375,4 +436,50 @@ class MockWordApi implements WordApi {
       ],
     );
   }
+
+  List<WordDraft> _getTopicWordBank(String topic) {
+    final lower = topic.toLowerCase();
+    if (lower.contains('công sở') || lower.contains('việc') || lower.contains('work') || lower.contains('office')) {
+      return const [
+        WordDraft(english: 'colleague', level: Level.b1, values: [WordValue(vietnamese: 'đồng nghiệp', pronunciation: '/ˈkɒliːɡ/', partOfSpeech: PartOfSpeech.noun, example: 'She gets along well with her colleagues.', exampleTranslation: 'Cô ấy hòa đồng với các đồng nghiệp.')]),
+        WordDraft(english: 'deadline', level: Level.a2, values: [WordValue(vietnamese: 'hạn chót', pronunciation: '/ˈdedlaɪn/', partOfSpeech: PartOfSpeech.noun, example: 'We have to meet the project deadline.', exampleTranslation: 'Chúng tôi phải kịp hạn chót dự án.')]),
+        WordDraft(english: 'promotion', level: Level.b2, values: [WordValue(vietnamese: 'sự thăng chức, đề bạt', pronunciation: '/prəˈməʊʃn/', partOfSpeech: PartOfSpeech.noun, example: 'He received a promotion last month.', exampleTranslation: 'Anh ấy đã được thăng chức tháng trước.')]),
+        WordDraft(english: 'salary', level: Level.a2, values: [WordValue(vietnamese: 'tiền lương', pronunciation: '/ˈsæləri/', partOfSpeech: PartOfSpeech.noun, example: 'Her monthly salary is quite competitive.', exampleTranslation: 'Lương tháng của cô ấy khá cạnh tranh.')]),
+        WordDraft(english: 'contract', level: Level.b1, values: [WordValue(vietnamese: 'hợp đồng', pronunciation: '/ˈkɒntrækt/', partOfSpeech: PartOfSpeech.noun, example: 'They signed a two-year contract.', exampleTranslation: 'Họ đã ký hợp đồng 2 năm.')]),
+        WordDraft(english: 'interview', level: Level.b1, values: [WordValue(vietnamese: 'cuộc phỏng vấn', pronunciation: '/ˈɪntəvjuː/', partOfSpeech: PartOfSpeech.noun, example: 'I had an interview for a new job.', exampleTranslation: 'Tôi có cuộc phỏng vấn cho công việc mới.')]),
+        WordDraft(english: 'resume', level: Level.b1, values: [WordValue(vietnamese: 'sơ yếu lý lịch', pronunciation: '/ˈrezjʊmeɪ/', partOfSpeech: PartOfSpeech.noun, example: 'Submit your resume online.', exampleTranslation: 'Hãy nộp sơ yếu lý lịch trực tuyến.')]),
+        WordDraft(english: 'workplace', level: Level.b1, values: [WordValue(vietnamese: 'nơi làm việc', pronunciation: '/ˈwɜːkpleɪs/', partOfSpeech: PartOfSpeech.noun, example: 'A friendly workplace motivates staff.', exampleTranslation: 'Môi trường làm việc thân thiện khích lệ nhân viên.')]),
+        WordDraft(english: 'negotiation', level: Level.b2, values: [WordValue(vietnamese: 'sự đàm phán, thương lượng', pronunciation: '/nɪˌɡəʊʃiˈeɪʃn/', partOfSpeech: PartOfSpeech.noun, example: 'Peaceful negotiations took place yesterday.', exampleTranslation: 'Các cuộc đàm phán hòa bình đã diễn ra hôm qua.')]),
+        WordDraft(english: 'overtime', level: Level.b1, values: [WordValue(vietnamese: 'làm thêm giờ', pronunciation: '/ˈəʊvətaɪm/', partOfSpeech: PartOfSpeech.noun, example: 'He worked 10 hours of overtime this week.', exampleTranslation: 'Anh ấy làm thêm 10 giờ tuần này.')]),
+      ];
+    }
+    if (lower.contains('du lịch') || lower.contains('travel') || lower.contains('tour')) {
+      return const [
+        WordDraft(english: 'passport', level: Level.a2, values: [WordValue(vietnamese: 'hộ chiếu', pronunciation: '/ˈpɑːspɔːt/', partOfSpeech: PartOfSpeech.noun, example: 'Do not forget your passport at home.', exampleTranslation: 'Đừng quên hộ chiếu ở nhà nhé.')]),
+        WordDraft(english: 'luggage', level: Level.a2, values: [WordValue(vietnamese: 'hành lý', pronunciation: '/ˈlʌɡɪdʒ/', partOfSpeech: PartOfSpeech.noun, example: 'They checked their luggage at the airport.', exampleTranslation: 'Họ gửi hành lý tại sân bay.')]),
+        WordDraft(english: 'destination', level: Level.b1, values: [WordValue(vietnamese: 'điểm đến', pronunciation: '/ˌdestɪˈneɪʃn/', partOfSpeech: PartOfSpeech.noun, example: 'Paris is a popular travel destination.', exampleTranslation: 'Paris là điểm đến du lịch nổi tiếng.')]),
+        WordDraft(english: 'souvenir', level: Level.b1, values: [WordValue(vietnamese: 'quà lưu niệm', pronunciation: '/ˌsuːvəˈnɪə/', partOfSpeech: PartOfSpeech.noun, example: 'I bought a lovely souvenir from London.', exampleTranslation: 'Tôi mua món quà lưu niệm xinh xắn từ London.')]),
+        WordDraft(english: 'departure', level: Level.b1, values: [WordValue(vietnamese: 'sự khởi hành', pronunciation: '/dɪˈpɑːtʃə/', partOfSpeech: PartOfSpeech.noun, example: 'The departure time was delayed.', exampleTranslation: 'Giờ khởi hành đã bị hoãn.')]),
+        WordDraft(english: 'itinerary', level: Level.b2, values: [WordValue(vietnamese: 'lịch trình chuyến đi', pronunciation: '/aɪˈtɪnərəri/', partOfSpeech: PartOfSpeech.noun, example: 'Check the travel itinerary carefully.', exampleTranslation: 'Kiểm tra kỹ lịch trình chuyến đi nhé.')]),
+        WordDraft(english: 'boarding', level: Level.a2, values: [WordValue(vietnamese: 'lên tàu bay, lên xe', pronunciation: '/ˈbɔːdɪŋ/', partOfSpeech: PartOfSpeech.noun, example: 'Boarding begins in twenty minutes.', exampleTranslation: 'Việc lên máy bay bắt đầu sau 20 phút nữa.')]),
+        WordDraft(english: 'reservation', level: Level.b1, values: [WordValue(vietnamese: 'sự đặt chỗ trước', pronunciation: '/ˌrezəˈveɪʃn/', partOfSpeech: PartOfSpeech.noun, example: 'I made a hotel reservation yesterday.', exampleTranslation: 'Tôi đã đặt phòng khách sạn hôm qua.')]),
+        WordDraft(english: 'sightseeing', level: Level.b1, values: [WordValue(vietnamese: 'ngắm cảnh, tham quan', pronunciation: '/ˈsaɪtsiːɪŋ/', partOfSpeech: PartOfSpeech.noun, example: 'We went sightseeing around Hanoi.', exampleTranslation: 'Chúng tôi đã đi ngắm cảnh quanh Hà Nội.')]),
+        WordDraft(english: 'guidebook', level: Level.a2, values: [WordValue(vietnamese: 'sách hướng dẫn du lịch', pronunciation: '/ˈɡaɪdbʊk/', partOfSpeech: PartOfSpeech.noun, example: 'This guidebook lists the best restaurants.', exampleTranslation: 'Cuốn sách hướng dẫn này liệt kê các nhà hàng tốt nhất.')]),
+      ];
+    }
+    // Mặc định hoặc chủ đề khác
+    return [
+      WordDraft(english: 'perspective', level: Level.b2, values: const [WordValue(vietnamese: 'góc nhìn, quan điểm', pronunciation: '/pəˈspektɪv/', partOfSpeech: PartOfSpeech.noun, example: 'Travel gives you a new perspective on life.', exampleTranslation: 'Du lịch mang lại cho bạn góc nhìn mới về cuộc sống.')]),
+      WordDraft(english: 'innovative', level: Level.b2, values: const [WordValue(vietnamese: 'mang tính đổi mới, sáng tạo', pronunciation: '/ˈɪnəvətɪv/', partOfSpeech: PartOfSpeech.adjective, example: 'She offered an innovative solution.', exampleTranslation: 'Cô ấy đã đưa ra một giải pháp đổi mới.')]),
+      WordDraft(english: 'efficient', level: Level.b1, values: const [WordValue(vietnamese: 'hiệu quả, năng suất cao', pronunciation: '/ɪˈfɪʃnt/', partOfSpeech: PartOfSpeech.adjective, example: 'This tool is fast and efficient.', exampleTranslation: 'Công cụ này rất nhanh và hiệu quả.')]),
+      WordDraft(english: 'collaborate', level: Level.b2, values: const [WordValue(vietnamese: 'hợp tác, cộng tác', pronunciation: '/kəˈlæbəreɪt/', partOfSpeech: PartOfSpeech.verb, example: 'We collaborate with researchers globally.', exampleTranslation: 'Chúng tôi hợp tác với các nhà nghiên cứu toàn cầu.')]),
+      WordDraft(english: 'sustainable', level: Level.b2, values: const [WordValue(vietnamese: 'bền vững', pronunciation: '/səˈsteɪnəbl/', partOfSpeech: PartOfSpeech.adjective, example: 'Sustainable energy is crucial for our future.', exampleTranslation: 'Năng lượng bền vững rất quan trọng cho tương lai.')]),
+      WordDraft(english: 'resilient', level: Level.c1, values: const [WordValue(vietnamese: 'kiên cường, có khả năng phục hồi', pronunciation: '/rɪˈzɪliənt/', partOfSpeech: PartOfSpeech.adjective, example: 'He is resilient in the face of difficulties.', exampleTranslation: 'Anh ấy kiên cường trước khó khăn.')]),
+      WordDraft(english: 'optimize', level: Level.b2, values: const [WordValue(vietnamese: 'tối ưu hóa', pronunciation: '/ˈɒptɪmaɪz/', partOfSpeech: PartOfSpeech.verb, example: 'We should optimize our study schedule.', exampleTranslation: 'Chúng ta nên tối ưu lịch học của mình.')]),
+      WordDraft(english: 'comprehensive', level: Level.b2, values: const [WordValue(vietnamese: 'toàn diện, bao quát', pronunciation: '/ˌkɒmprɪˈhensɪv/', partOfSpeech: PartOfSpeech.adjective, example: 'This is a comprehensive English dictionary.', exampleTranslation: 'Đây là cuốn từ điển tiếng Anh toàn diện.')]),
+      WordDraft(english: 'adaptable', level: Level.b2, values: const [WordValue(vietnamese: 'dễ thích nghi', pronunciation: '/əˈdæptəbl/', partOfSpeech: PartOfSpeech.adjective, example: 'Successful learners are adaptable.', exampleTranslation: 'Người học thành công là người biết thích nghi.')]),
+      WordDraft(english: 'inspire', level: Level.b1, values: const [WordValue(vietnamese: 'truyền cảm hứng', pronunciation: '/ɪnˈspaɪə/', partOfSpeech: PartOfSpeech.verb, example: 'Her story inspired millions of people.', exampleTranslation: 'Câu chuyện của cô ấy đã truyền cảm hứng cho hàng triệu người.')]),
+    ];
+  }
 }
+

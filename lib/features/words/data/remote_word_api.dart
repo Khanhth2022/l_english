@@ -36,9 +36,21 @@ class RemoteWordApi implements WordApi {
   });
 
   @override
+  Future<int> fetchDueCount() => _call(() async {
+    final response = await _dio.get<Object?>('$_basePath/due-count');
+    final data = response.data;
+    if (data is Map && data['dueCount'] is num) {
+      return (data['dueCount'] as num).toInt();
+    }
+    return 0;
+  });
+
+  @override
   Future<Word> createWord(WordDraft draft) => _call(() async {
     final response = await _dio.post<Object?>(_basePath, data: draft.toJson());
-    return _wordOrThrow(response.data);
+    final data = response.data;
+    final wordMap = data is Map ? (data['data'] is Map ? data['data'] : data) : null;
+    return _wordOrThrow(wordMap);
   });
 
   @override
@@ -47,7 +59,9 @@ class RemoteWordApi implements WordApi {
       '$_basePath/$id',
       data: draft.toJson(),
     );
-    return _wordOrThrow(response.data);
+    final data = response.data;
+    final wordMap = data is Map ? (data['data'] is Map ? data['data'] : data) : null;
+    return _wordOrThrow(wordMap);
   });
 
   @override
@@ -78,13 +92,39 @@ class RemoteWordApi implements WordApi {
     await _dio.post<Object?>('$_basePath/review', data: {'wordIds': wordIds});
   });
 
+  @override
+  Future<List<WordDraft>> generateTopicWords(String topic) => _call(() async {
+    final response = await _dio.post<Object?>(
+      '$_basePath/generate-topic',
+      data: {'topic': topic},
+    );
+    final data = response.data;
+    final list = data is Map ? data['data'] : (data is List ? data : null);
+    if (list is! List) {
+      throw ApiException(0, 'Máy chủ không trả về danh sách từ theo chủ đề.');
+    }
+    return asMapList(list).map(WordDraft.fromJson).toList();
+  });
+
+  @override
+  Future<List<Word>> confirmTopicWords(List<WordDraft> words) => _call(() async {
+    final response = await _dio.post<Object?>(
+      '$_basePath/generate-topic/confirm',
+      data: {'words': words.map((w) => w.toJson()).toList()},
+    );
+    final data = response.data;
+    final list = data is Map ? data['data'] : (data is List ? data : null);
+    if (list is! List) {
+      throw ApiException(0, 'Máy chủ không trả về kết quả lưu từ theo chủ đề.');
+    }
+    return asMapList(list).map(Word.fromJson).toList();
+  });
+
   Word _wordOrThrow(Object? data) {
     if (data is Map) return Word.fromJson(Map<String, dynamic>.from(data));
     throw ApiException(0, 'Máy chủ không trả về dữ liệu của từ vừa lưu.');
   }
 
-  /// Chuyển lỗi của Dio thành [ApiException] để tầng giao diện chỉ phải xử lý
-  /// một loại lỗi duy nhất.
   Future<T> _call<T>(Future<T> Function() action) async {
     try {
       return await action();

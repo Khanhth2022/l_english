@@ -31,6 +31,17 @@ class _FailingWordApi implements WordApi {
   @override
   Future<void> confirmReview(List<int> wordIds) async =>
       throw UnimplementedError();
+
+  @override
+  Future<int> fetchDueCount() async => throw UnimplementedError();
+
+  @override
+  Future<List<WordDraft>> generateTopicWords(String topic) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<Word>> confirmTopicWords(List<WordDraft> words) async =>
+      throw UnimplementedError();
 }
 
 void main() {

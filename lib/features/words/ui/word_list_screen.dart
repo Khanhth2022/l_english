@@ -8,6 +8,7 @@ import '../state/word_list_controller.dart';
 import 'connection_settings_screen.dart';
 import 'widgets/word_card.dart';
 import 'word_form_screen.dart';
+import 'topic_words_screen.dart';
 
 /// Màn hình "Sổ từ của tôi" — chức năng Xem / Sửa / Xoá từ và Xác nhận ôn tập.
 class WordListScreen extends StatelessWidget {
@@ -64,10 +65,27 @@ class _WordListViewState extends State<_WordListView>
                 : controller.load,
             icon: const Icon(Icons.refresh),
           ),
+          IconButton(
+            tooltip: 'Thêm từ theo chủ đề (AI)',
+            icon: const Icon(Icons.auto_awesome, color: Color(0xFF7C3AED)),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const TopicWordsScreen(),
+                ),
+              );
+            },
+          ),
           PopupMenuButton<String>(
             tooltip: 'Khác',
             onSelected: (value) {
-              if (value == 'settings') {
+              if (value == 'topic') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const TopicWordsScreen(),
+                  ),
+                );
+              } else if (value == 'settings') {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const ConnectionSettingsScreen(),
@@ -76,6 +94,10 @@ class _WordListViewState extends State<_WordListView>
               }
             },
             itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'topic',
+                child: Text('Thêm từ theo chủ đề (AI)'),
+              ),
               PopupMenuItem(
                 value: 'settings',
                 child: Text('Cấu hình kết nối'),

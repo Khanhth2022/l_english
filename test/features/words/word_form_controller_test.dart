@@ -36,6 +36,15 @@ class _RecordingWordApi implements WordApi {
 
   @override
   Future<void> confirmReview(List<int> wordIds) async {}
+
+  @override
+  Future<int> fetchDueCount() async => 0;
+
+  @override
+  Future<List<WordDraft>> generateTopicWords(String topic) async => const [];
+
+  @override
+  Future<List<Word>> confirmTopicWords(List<WordDraft> words) async => const [];
 }
 
 void main() {
