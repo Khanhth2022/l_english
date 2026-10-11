@@ -1,0 +1,86 @@
+@startuml LEnglish_DeploymentDiagram
+' ============================================================================
+' LEnglish — Deployment Diagram (góc nhìn triển khai / vật lý)
+' Thể hiện các node vật lý, artifact chạy trên đó, và đường giao tiếp + giao thức.
+' LƯU Ý render: luôn -charset UTF-8 (codepage máy = 1258 sẽ làm hỏng tiếng Việt).
+'   java "-Dfile.encoding=UTF-8" -jar plantuml.jar -charset UTF-8 -tpng|-tsvg -o . deployment-diagram.puml
+' Extension PlantUML (jebbs) trong VS Code tự thêm -charset UTF-8 nên Alt+D luôn đúng.
+' ============================================================================
+!pragma layout smetana
+
+title LEnglish — Deployment Diagram (Kiến trúc triển khai)
+caption Node = nơi chạy · artifact = thành phần triển khai · mũi tên = đường giao tiếp kèm giao thức.
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 14
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #455A64
+skinparam ArrowThickness 1.4
+skinparam nodesep 40
+skinparam ranksep 60
+skinparam node {
+  BackgroundColor #ECEFF1
+  BorderColor #455A64
+  FontStyle bold
+}
+skinparam artifact {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #607D8B
+}
+skinparam database {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+skinparam cloud {
+  BackgroundColor #FFF8E1
+  BorderColor #B28704
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+}
+
+node "Thiết bị Android\n(điện thoại người dùng)" as Phone {
+  artifact "LEnglish.apk\n(ứng dụng Android)" as APK {
+    component "Giao diện\n(Activities / Fragments)" as UI
+    component "WorkManager / Worker\n(nhắc ôn nền)" as Worker
+    component "AppWidgetProvider\n(widget màn hình chính)" as Widget
+    component "ML Kit OCR\n(nhận dạng chữ — on-device)" as OCR
+  }
+}
+
+node "Máy chủ ứng dụng\n(Application Server)" as AppServer {
+  artifact "lenglish-backend.jar\n(Spring Boot + Tomcat nhúng)" as Jar {
+    component "Controller (REST API)" as Ctrl
+    component "JwtFilter (bảo mật token)" as Jwt
+    component "Service / ServiceImpl" as Svc
+    component "Repository (Spring Data JPA)" as Repo
+  }
+}
+
+database "Máy chủ CSDL\n(MySQL)" as DB
+
+cloud "Dịch vụ AI bên ngoài\n(LLM: sinh nghĩa từ & chấm câu)" as AI
+
+' ===================== Đường giao tiếp =====================
+APK --> Jar : HTTPS / REST\n+ JWT (Bearer token)
+Jar --> DB  : JDBC (TCP)
+Jar --> AI  : HTTPS / REST\n(gọi API, kèm API key)
+
+note bottom of OCR
+  OCR chạy on-device (ML Kit) — không gửi ảnh ra mạng;
+  chỉ văn bản nhận dạng mới đi qua REST như các request khác.
+end note
+
+legend bottom
+  <b>Node</b> = máy/thiết bị thực thi · <b>artifact</b> = gói triển khai · <b>component</b> = thành phần bên trong
+  Toàn bộ truy cập API đi qua HTTPS và được JwtFilter kiểm tra token trước khi vào Controller.
+endlegend
+
+@enduml

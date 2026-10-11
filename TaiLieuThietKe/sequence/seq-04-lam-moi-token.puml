@@ -1,0 +1,74 @@
+@startuml seq-04-lam-moi-token
+title Sequence Diagram — Làm mới token (Refresh token rotation)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+participant "Giao diện\n(Client)" as UI
+participant "AuthController" as CTRL
+participant "AuthService" as SVC
+participant "RefreshTokenRepository" as TREPO
+database "Database" as DB
+
+UI -> CTRL : POST /api/auth/refresh (refreshToken)
+activate CTRL
+CTRL -> SVC : refresh(refreshToken)
+activate SVC
+SVC -> TREPO : findByToken(refreshToken)
+activate TREPO
+TREPO -> DB : JPA đọc refresh_tokens theo token
+DB --> TREPO : RefreshToken / null
+TREPO --> SVC : Optional<RefreshToken>
+deactivate TREPO
+
+alt Không có trong database
+    SVC --> CTRL : ném InvalidTokenException
+    CTRL --> UI : 401 "Đăng nhập thất bại"
+else Có trong database
+    SVC -> SVC : Kiểm tra expiryDate
+    alt Đã hết hạn
+        SVC -> TREPO : delete(token hết hạn)
+        activate TREPO
+        TREPO -> DB : JPA xóa refresh_tokens theo token
+        deactivate TREPO
+        SVC --> CTRL : ném TokenExpiredException
+        CTRL --> UI : 401 "Phiên đăng nhập hết hạn"
+    else Còn hiệu lực
+        SVC -> TREPO : delete(token cũ)   // token rotation
+        activate TREPO
+        TREPO -> DB : JPA xóa refresh_tokens theo token cũ
+        deactivate TREPO
+        SVC -> SVC : Tạo access token + refresh token MỚI
+        SVC -> TREPO : save(refresh token mới + expiryDate)
+        activate TREPO
+        TREPO -> DB : JPA ghi refresh_tokens
+        deactivate TREPO
+        SVC --> CTRL : { accessToken, refreshToken } mới
+        CTRL --> UI : 200 + cặp token mới
+    end
+end
+deactivate SVC
+deactivate CTRL
+
+note over SVC, DB
+  Refresh token rotation: dùng rồi xóa, cấp cặp mới.
+  Token hết hạn còn trong DB vẫn bị 401 và bị dọn đi.
+end note
+@enduml

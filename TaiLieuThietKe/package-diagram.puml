@@ -1,0 +1,85 @@
+@startuml LEnglish_PackageDiagram
+' ============================================================================
+' LEnglish — Package Diagram (Spring Boot Backend)
+' Chỉ thể hiện package và quan hệ phụ thuộc; không mô tả class (xem class-diagram.puml).
+' Bố cục: gom package vào 4 khung TẦNG (layered application model) cho dễ đọc top-down.
+' LƯU Ý render: luôn truyền -charset UTF-8 (codepage máy = 1258 sẽ làm hỏng tiếng Việt).
+'   java "-Dfile.encoding=UTF-8" -jar plantuml.jar -charset UTF-8 -tpng|-tsvg -o . package-diagram.puml
+' Extension PlantUML (jebbs) trong VS Code đã tự thêm -charset UTF-8 nên Alt+D luôn đúng.
+' ============================================================================
+!pragma layout smetana
+
+title LEnglish — Package Diagram (Spring Boot Backend)
+caption Kiến trúc phân tầng; mũi tên nét đứt = phụ thuộc (dependency). Chi tiết class xem Class Diagram.
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 15
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam packageStyle rectangle
+skinparam ArrowColor #455A64
+skinparam ArrowThickness 1.4
+skinparam nodesep 40
+skinparam ranksep 55
+skinparam package {
+  BorderColor #607D8B
+  FontStyle bold
+  FontSize 15
+}
+
+' ===================== TẦNG (layer containers) =====================
+package "Tầng giao diện\n(Presentation)" as PL #EAF3FB {
+  package "controller" as Controller #E3F2FD
+  package "form" as Form #E3F2FD
+  package "dto" as Dto #E3F2FD
+}
+
+package "Tầng nghiệp vụ\n(Business)" as BL #FFFBF0 {
+  package "service" as Service #FFF8E1
+  package "service.impl" as ServiceImpl #FFF8E1
+}
+
+package "Tầng dữ liệu\n(Data Access)" as DL #EFF7EF {
+  package "mapper" as Mapper #E8F5E9
+  package "repository" as Repository #E8F5E9
+  package "entity" as Entity #E8F5E9
+}
+
+package "Xuyên suốt\n(Cross-cutting)" as CC #F3EFFA {
+  package "config" as Config #EDE7F6
+  package "exception" as Exception #EDE7F6
+  package "enums" as Enums #EDE7F6
+}
+
+' ===================== GỢI Ý THỨ TỰ TẦNG =====================
+PL -[hidden]down- BL
+BL -[hidden]down- DL
+PL -[hidden]right- CC
+
+' ===================== QUAN HỆ CHÍNH (top-down) =====================
+Controller ..> Service : gọi nghiệp vụ
+ServiceImpl ..|> Service : implements
+ServiceImpl ..> Repository : truy vấn
+ServiceImpl ..> Mapper : chuyển đổi
+Repository ..> Entity
+Mapper ..> Entity
+Mapper ..> Dto
+
+' ===================== QUAN HỆ TRONG TẦNG GIAO DIỆN =====================
+Controller ..> Form : nhận request
+Controller ..> Dto : trả response
+
+' ===================== XUYÊN SUỐT =====================
+Config ..> Controller : bảo vệ endpoint
+Exception ..> Controller : xử lý lỗi HTTP
+Dto ..> Enums
+Form ..> Enums
+Entity ..> Enums
+
+legend bottom
+  <b>Tầng:</b> xanh dương = Presentation | vàng = Business | xanh lá = Data | tím = Cross-cutting
+  <b>Mũi tên nét đứt (..>):</b> package nguồn phụ thuộc package đích | <b>..|>:</b> hiện thực hoá (implements)
+endlegend
+
+@enduml

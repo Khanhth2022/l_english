@@ -1,0 +1,29 @@
+@startuml act-13-xoa-doan-van
+title Xóa đoạn văn
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Người dùng gửi yêu cầu xóa đoạn văn (kèm token);
+:Kiểm tra token gửi lên;
+if (Token hợp lệ?) then (không)
+  #FFEBEE:Trả lỗi 401
+  "Token không hợp lệ hoặc hết hạn";
+else (có)
+  :Kiểm tra người gửi có sở hữu đoạn văn này?;
+  if (Là chủ sở hữu?) then (không)
+    #FFEBEE:Trả lỗi 403
+    "Không có quyền xóa đoạn văn này";
+  else (có)
+    :Xóa đoạn văn trong database
+    (grammar_errors xóa theo cascade);
+    :Trả "Xóa đoạn văn thành công";
+    :Cập nhật danh sách trên màn hình;
+  endif
+endif
+stop
+@enduml

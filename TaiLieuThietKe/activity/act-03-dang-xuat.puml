@@ -1,0 +1,20 @@
+@startuml act-03-dang-xuat
+title Đăng xuất
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Người dùng gửi yêu cầu đăng xuất;
+:Xóa refresh token trong database;
+note right
+  Access token (JWT) không thu hồi
+  ngay — còn hiệu lực đến khi hết hạn
+  (thời gian ngắn, stateless)
+end note
+:Trả "Đăng xuất thành công";
+stop
+@enduml

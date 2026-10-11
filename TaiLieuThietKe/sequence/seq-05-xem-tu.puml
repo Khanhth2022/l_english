@@ -1,0 +1,66 @@
+@startuml seq-05-xem-tu
+title Sequence Diagram — Xem từ
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "JwtFilter\n«config»" as JWT
+participant "WordController" as CTRL
+participant "WordService" as SVC
+participant "WordRepository" as REPO
+database "Database" as DB
+
+User -> UI : Mở màn hình danh sách từ
+activate UI
+UI -> JWT : GET /api/words  (Authorization: Bearer <token>)
+activate JWT
+JWT -> JWT : Xác thực JWT (chữ ký, hạn dùng)
+
+alt Token không hợp lệ / hết hạn
+    JWT --> UI : 401 "Token không hợp lệ hoặc hết hạn"
+    UI --> User : Yêu cầu đăng nhập lại
+else Token hợp lệ
+    JWT -> CTRL : Chuyển tiếp request (đính kèm userId)
+    deactivate JWT
+    activate CTRL
+    CTRL -> SVC : getWords(userId)
+    activate SVC
+    SVC -> REPO : findByUserId(userId)
+    activate REPO
+    REPO -> DB : JPA đọc words theo user_id
+    DB --> REPO : List<Word>
+    REPO --> SVC : List<Word>
+    deactivate REPO
+    SVC -> SVC : Map Entity → WordDto
+    SVC --> CTRL : List<WordDto>
+    deactivate SVC
+    CTRL --> UI : 200 + danh sách từ
+    deactivate CTRL
+    UI --> User : Hiển thị danh sách từ
+end
+deactivate UI
+
+note over SVC, DB
+  Luôn lọc WHERE user_id = user hiện tại
+  → mỗi user chỉ thấy dữ liệu của mình.
+end note
+@enduml

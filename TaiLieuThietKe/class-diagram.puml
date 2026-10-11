@@ -1,0 +1,170 @@
+@startuml LEnglish_ClassDiagram
+' ==========================================================================
+'  LEnglish — Class Diagram (JPA Entities)
+'  Xem trước trong VS Code: cài extension "PlantUML" (jebbs) -> Alt+D
+'  - !pragma layout smetana: dùng layout engine có sẵn trong PlantUML,
+'    KHÔNG cần cài Graphviz. Đã kiểm chứng bố cục với PlantUML 1.2024.3.
+'  - Nếu máy có Graphviz, có thể xóa dòng pragma dưới đây để dot tự sắp.
+' ==========================================================================
+!pragma layout smetana
+
+skinparam dpi 130
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide circle
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 55
+skinparam defaultFontName "Segoe UI"
+skinparam roundCorner 8
+skinparam ArrowThickness 1.2
+
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #37474F
+  ArrowColor #455A64
+  HeaderBackgroundColor #ECEFF1
+  AttributeFontSize 12
+  FontSize 13
+}
+skinparam enum {
+  BackgroundColor #FFF8E1
+  BorderColor #B28704
+  HeaderBackgroundColor #FFECB3
+}
+skinparam stereotypeCBackgroundColor #CFD8DC
+skinparam legendBackgroundColor #FAFAFA
+skinparam legendBorderColor #B0BEC5
+
+title LEnglish — Class Diagram (JPA Entities)
+
+class User <<@Entity — users>> {
+  - id : Long {PK, IDENTITY}
+  - username : String {unique, not null}
+  - password : String {BCrypt hash, not null}
+  --
+  + words : List<Word>
+  + phrases : List<Phrase>
+  + refreshTokens : List<RefreshToken>
+}
+
+class RefreshToken <<@Entity — refresh_tokens>> {
+  - id : Long {PK, IDENTITY}
+  - token : String {unique, not null}
+  - expiryDate : LocalDateTime {not null}
+  - createdAt : LocalDateTime
+  --
+  - user : User {FK user_id, not null}
+}
+
+class Word <<@Entity — words>> {
+  - id : Long {PK, IDENTITY}
+  - english : String {not null, unique per user}
+  - level : Level
+  - reviewCount : Integer {default 0}
+  - nextReview : LocalDateTime
+  - createdAt : LocalDateTime
+  - updatedAt : LocalDateTime
+  --
+  - user : User {FK user_id}
+  + values : List<WordValue>
+}
+
+class WordValue <<@Entity — word_values>> {
+  - id : Long {PK, IDENTITY}
+  - vietnamese : String {nghĩa tiếng Việt}
+  - example : String {câu ví dụ}
+  - exampleTranslation : String {dịch câu ví dụ}
+  - pronunciation : String {phiên âm IPA}
+  - partOfSpeech : PartOfSpeech {@Enumerated STRING}
+  --
+  - word : Word {FK word_id}
+}
+
+class WordCache <<@Entity — word_cache>> {
+  - id : Long {PK, IDENTITY}
+  - english : String {unique}
+  - level : Level
+  - createdAt : LocalDateTime
+  - updatedAt : LocalDateTime
+  --
+  + values : List<WordCacheValue>
+}
+
+class WordCacheValue <<@Entity — word_cache_values>> {
+  - id : Long {PK, IDENTITY}
+  - vietnamese : String {nghĩa tiếng Việt}
+  - example : String {câu ví dụ}
+  - exampleTranslation : String {dịch câu ví dụ}
+  - pronunciation : String {phiên âm IPA}
+  - partOfSpeech : PartOfSpeech {@Enumerated STRING}
+  --
+  - wordCache : WordCache {FK word_cache_id}
+}
+
+class Phrase <<@Entity — phrases>> {
+  - id : Long {PK, IDENTITY}
+  - text : String {câu gốc}
+  - correctedText : String {câu đã sửa}
+  - score : Integer {CHECK 0..10}
+  - createdAt : LocalDateTime
+  - updatedAt : LocalDateTime
+  --
+  - user : User {FK user_id}
+  + grammarErrors : List<GrammarError>
+}
+
+class GrammarError <<@Entity — grammar_errors>> {
+  - id : Long {PK, IDENTITY}
+  - incorrect : String {cụm sai}
+  - correction : String {cụm đúng}
+  - explanation : String {tiếng Việt}
+  --
+  - phrase : Phrase {FK phrase_id}
+}
+
+enum Level <<Enumeration>> {
+  A1
+  A2
+  B1
+  B2
+  C1
+  C2
+}
+
+enum PartOfSpeech <<Enumeration>> {
+  NOUN
+  VERB
+  ADJECTIVE
+  ADVERB
+  PREPOSITION
+  CONJUNCTION
+  PRONOUN
+  INTERJECTION
+}
+
+' Rank: User trên; entity con dưới entity cha; enum bên phải
+User -[hidden]down- Word
+User -[hidden]down- Phrase
+User -[hidden]down- RefreshToken
+User -[hidden]down- WordCache
+Word -[hidden]down- WordValue
+Phrase -[hidden]down- GrammarError
+WordCache -[hidden]down- WordCacheValue
+Word -[hidden]right- Level
+WordValue -[hidden]right- PartOfSpeech
+WordCacheValue -[hidden]right- PartOfSpeech
+
+' Quan hệ (FK nằm ở phía 0..*)
+User "1" -- "0..*" Word : owns
+User "1" -- "0..*" Phrase : owns
+User "1" -- "0..*" RefreshToken : owns
+Phrase "1" *-- "0..*" GrammarError : contains
+Word "1" *-- "0..*" WordValue : contains
+WordCache "1" *-- "0..*" WordCacheValue : contains
+Word ..> Level
+WordCache ..> Level
+WordValue ..> PartOfSpeech
+WordCacheValue ..> PartOfSpeech
+
+@enduml

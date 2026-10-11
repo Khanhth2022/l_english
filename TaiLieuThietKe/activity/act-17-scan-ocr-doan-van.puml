@@ -1,0 +1,34 @@
+@startuml act-17-scan-ocr-doan-van
+title Quét OCR lấy văn bản vào ô Chấm đoạn văn (Android)
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Người dùng bấm "Quét ảnh"
+trong màn hình Chấm đoạn văn;
+:Chọn ảnh từ thư viện
+hoặc chụp ảnh mới;
+if (Đã có quyền truy cập ảnh?) then (không)
+  :Yêu cầu quyền
+  (camera / thư viện ảnh); 
+  :Người dùng từ chối → dừng;
+else (có)
+  :Tiền xử lý ảnh
+  (cắt, tăng tương phản, nhị phân hóa);
+  :Chạy OCR (ML Kit) trên thiết bị;
+  if (Nhận dạng được văn bản?) then (không)
+    :Thông báo
+    "Không tìm thấy văn bản trong ảnh";
+  else (có)
+    :Lấy chuỗi văn bản thô từ OCR;
+    :Điền văn bản vào ô đoạn văn
+    để người dùng xem lại / chỉnh sửa;
+    :Gọi Chấm đoạn văn (AI);
+  endif
+endif
+stop
+@enduml

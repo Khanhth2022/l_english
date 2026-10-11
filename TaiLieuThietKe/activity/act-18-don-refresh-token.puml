@@ -1,0 +1,30 @@
+@startuml act-18-don-refresh-token
+title Dọn refresh token hết hạn (Bộ định thời — server)
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Bộ định thời (scheduler) kích hoạt
+theo lịch mỗi ngày (khung giờ cố định);
+:Truy vấn các refresh token có
+expiry_date < thời điểm hiện tại;
+if (Có token hết hạn?) then (không)
+  :Không có gì để dọn;
+else (có)
+  :Xóa toàn bộ refresh token hết hạn
+  khỏi database (DELETE);
+  :Ghi log số token đã dọn;
+endif
+stop
+
+note right
+  Tác vụ nền chạy trên server, KHÔNG do người dùng gọi.
+  Chỉ xóa token đã hết hạn; token còn hạn giữ nguyên.
+  Khác với "Làm mới token" (client tự gọi khi access
+  token hết hạn — xem act-04).
+end note
+@enduml

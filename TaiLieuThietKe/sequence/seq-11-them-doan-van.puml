@@ -1,0 +1,81 @@
+@startuml seq-11-them-doan-van
+title Sequence Diagram — Thêm đoạn văn («include» Chấm đoạn văn)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "JwtFilter\n«config»" as JWT
+participant "PhraseController" as CTRL
+participant "PhraseService" as SVC
+participant "PhraseRepository" as REPO
+database "Database" as DB
+participant "AI" as AI #FFF8E1
+
+User -> UI : Nhập đoạn văn, bấm Gửi
+activate UI
+UI -> JWT : POST /api/phrases (text) + token
+activate JWT
+JWT -> JWT : Xác thực JWT
+
+alt Token không hợp lệ / hết hạn
+    JWT --> UI : 401 "Token không hợp lệ hoặc hết hạn"
+    UI --> User : Yêu cầu đăng nhập lại
+else Token hợp lệ
+    JWT -> CTRL : Chuyển tiếp (userId, text)
+    deactivate JWT
+    activate CTRL
+    CTRL -> SVC : addPhrase(userId, text)
+    activate SVC
+
+    ref over SVC, AI : Chấm đoạn văn (AI) — xem seq-12\ntrả về score, correctedText,\ndanh sách lỗi (incorrect, correction, explanation)
+
+    alt Chấm thất bại (đoạn văn không hợp lệ / AI lỗi)
+        SVC --> CTRL : ném InvalidPhraseException (400)\nhoặc AiServiceException (502)
+        deactivate SVC
+        CTRL --> UI : 400 "Đoạn văn gửi lên không hợp lệ"\n/ 502 "Dịch vụ AI tạm thời không khả dụng"
+        deactivate CTRL
+        UI --> User : Báo lỗi — KHÔNG lưu Phrase
+    else Chấm thành công
+        SVC -> REPO : save(Phrase: text, correctedText, score)
+        activate REPO
+        REPO -> DB : JPA ghi phrases
+        DB --> REPO : phraseId
+        deactivate REPO
+        SVC -> REPO : saveAll(GrammarErrors gắn phraseId)
+        activate REPO
+        REPO -> DB : JPA ghi grammar_errors
+        deactivate REPO
+        SVC --> CTRL : PhraseDto (score + lỗi)
+        deactivate SVC
+        CTRL --> UI : 201 "Thêm đoạn văn thành công" + kết quả
+        deactivate CTRL
+        UI --> User : Hiển thị điểm + lỗi + câu sửa
+    end
+end
+deactivate UI
+
+note over SVC, AI
+  «include»: Thêm đoạn văn LUÔN gọi Chấm đoạn văn (AI)
+  trước khi lưu, vì score / correctedText / lỗi đều do AI sinh.
+  AI lỗi → không ghi Phrase (tránh lưu bản thiếu điểm).
+end note
+@enduml

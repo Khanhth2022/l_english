@@ -1,0 +1,135 @@
+@startuml seq-20-them-tu-theo-chu-de
+title Sequence Diagram — Thêm từ mới theo chủ đề (AI sinh 10 từ)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "JwtFilter\n«config»" as JWT
+participant "WordController" as CTRL
+participant "WordService" as SVC
+participant "WordRepository" as WREPO
+participant "WordCacheRepository" as CREPO
+database "Database\n(words · word_values\nword_cache · word_cache_values)" as DB
+participant "AI" as AI #FFF8E1
+
+User -> UI : Nhập một chủ đề (vd. "công sở"),\nbấm "Tạo 10 từ mới"
+activate UI
+UI -> JWT : POST /api/words/generate-topic?topic=office + token
+activate JWT
+JWT -> JWT : Xác thực JWT
+
+alt Token không hợp lệ / hết hạn
+    JWT --> UI : 401 "Token không hợp lệ hoặc hết hạn"
+    UI --> User : Yêu cầu đăng nhập lại
+else Token hợp lệ
+    JWT -> CTRL : Chuyển tiếp (userId, topic)
+    deactivate JWT
+    activate CTRL
+    CTRL -> SVC : generateByTopic(userId, topic)
+    activate SVC
+    SVC -> AI : Xác nhận input có phải\nmột chủ đề có nghĩa không?
+    activate AI
+    AI --> SVC : chủ đề hợp lệ / không hợp lệ
+    deactivate AI
+
+    alt Không phải chủ đề (chuỗi vô nghĩa, từ rời không có nghĩa)
+        SVC --> CTRL : ném InvalidTopicException
+        CTRL --> UI : 400 "Chủ đề không hợp lệ, vui lòng nhập lại"
+        UI --> User : Yêu cầu nhập lại chủ đề
+    else Chủ đề hợp lệ
+        SVC -> WREPO : findExistingEnglishByUserId(userId)
+        activate WREPO
+        WREPO -> DB : JPA SELECT english FROM words\nWHERE user_id = ?
+        DB --> WREPO : danh sách từ đã có
+        WREPO --> SVC : List<String> (danh sách loại trừ)
+        deactivate WREPO
+        SVC -> AI : Sinh 10 từ theo chủ đề\n(topic + danh sách loại trừ;\nmỗi từ: nghĩa, phiên âm, từ loại,\nví dụ, level)
+        activate AI
+
+        alt AI lỗi / timeout / hết quota
+            AI --> SVC : (không có kết quả)
+            deactivate AI
+            SVC -> SVC : Không ghi DB khi AI lỗi
+            SVC --> CTRL : ném AiServiceException
+            CTRL --> UI : 502 "Dịch vụ AI tạm thời không khả dụng"
+            UI --> User : Báo lỗi, hẹn thử lại sau
+        else AI trả về đủ 10 từ
+            AI --> SVC : 10 từ kèm thông tin
+            deactivate AI
+            loop Mỗi từ trong 10 từ (toàn bộ nằm trong MỘT transaction)
+                SVC -> CREPO : findByEnglish(english)
+                activate CREPO
+                CREPO -> DB : JPA đọc word_cache theo english
+                DB --> CREPO : WordCache / null
+                CREPO --> SVC : Optional<WordCache>
+                deactivate CREPO
+                opt Cache miss (từ chưa có trong word_cache)
+                    SVC -> CREPO : save(WordCache mới)
+                    activate CREPO
+                    CREPO -> DB : JPA ghi word_cache\n(english UNIQUE, level, created_at, updated_at)
+                    DB --> CREPO : id
+                    CREPO -> DB : JPA ghi word_cache_values\n(word_cache_id, vietnamese, example,\nexample_translation, pronunciation, part_of_speech)
+                    DB --> CREPO : ok
+                    deactivate CREPO
+                end
+                SVC -> WREPO : save(Word gắn user_id)
+                activate WREPO
+                WREPO -> DB : JPA ghi words (english, level, user_id,\nreview_count = 0, created_at, updated_at)
+                DB --> WREPO : id
+                WREPO --> SVC : Word đã lưu
+                deactivate WREPO
+                SVC -> WREPO : saveAll(List<WordValue> gắn word_id)
+                activate WREPO
+                WREPO -> DB : JPA ghi word_values — MỖI NGHĨA 1 DÒNG\n(word_id, vietnamese, example,\nexample_translation, pronunciation, part_of_speech)
+                DB --> WREPO : ok
+                deactivate WREPO
+            end
+            SVC --> CTRL : List<WordDto> (10 từ)
+            CTRL --> UI : 201 "Thêm từ theo chủ đề thành công"\n+ List<WordDto>
+            UI --> User : Hiển thị 10 từ mới trong sổ
+        end
+    end
+    deactivate SVC
+    deactivate CTRL
+end
+deactivate UI
+
+note over CREPO, DB
+  Cache dùng chung mọi user (word_cache.english UNIQUE):
+  từ ĐÃ có trong word_cache thì không ghi thêm cache,
+  chỉ ghi mới các dòng words + word_values gắn user.
+  Từ CHƯA có trong cache được ghi cả hai phía:
+  word_cache → word_cache_values (cache) và
+  words → word_values (sổ từ cá nhân), cùng transaction.
+end note
+
+note over SVC, AI
+  AI đảm nhận 2 bước: (1) duyệt chủ đề — chuỗi vô nghĩa
+  hoặc một từ rời không phải chủ đề → 400 "vui lòng nhập lại";
+  (2) sinh 10 từ kèm đầy đủ thông tin. Danh sách từ đã có
+  của user gửi sang AI làm danh sách loại trừ nên 10 từ
+  không trùng sổ; UNIQUE (user_id, english) là lớp chặn cuối —
+  vi phạm thì rollback TOÀN BỘ batch (all-or-nothing),
+  sổ từ không bao giờ nhận được nửa danh sách.
+  AI lỗi/timeout → 502, không ghi DB.
+end note
+@enduml

@@ -1,0 +1,37 @@
+@startuml act-16-them-tu-tu-bo-chon
+title Thêm từ từ văn bản bôi đen (Android)
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Người dùng bôi đen một từ
+ở bất kỳ ứng dụng nào;
+:Android hiện thanh công cụ nổi
+(Sao chép, Chọn tất cả, ...);
+:Người dùng chọn
+"Thêm vào từ điển"
+(ACTION_PROCESS_TEXT);
+:LEnglish mở màn hình Thêm từ
+với từ đã bôi đen điền sẵn;
+:Người dùng kiểm tra / bổ sung
+nghĩa, phiên âm, level, loại từ, gọi đến AI;
+if (Người dùng bấm Lưu?) then (có)
+  :Gọi API thêm từ (kèm token);
+  if (Thêm từ thành công?) then (có)
+    :Đóng màn hình Thêm từ;
+    :Quay về ứng dụng trước đó;
+  else (không)
+    :Hiển thị lỗi
+    (401 token hết hạn / 409 từ đã tồn tại);
+    :Giữ màn hình để người dùng sửa;
+  endif
+else (không)
+  :Người dùng bấm Hủy / Back;
+  :Đóng màn hình, không lưu;
+endif
+stop
+@enduml

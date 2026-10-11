@@ -1,0 +1,46 @@
+@startuml seq-18-don-refresh-token
+title Sequence Diagram — Dọn refresh token hết hạn (Bộ định thời, server)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+participant "Bộ định thời\n(@Scheduled)" as SCHED
+participant "TokenCleanupService" as SVC
+participant "RefreshTokenRepository" as REPO
+database "Database" as DB
+
+SCHED -> SVC : Kích hoạt theo lịch\n(mỗi ngày, khung giờ cố định)
+activate SVC
+SVC -> REPO : deleteByExpiryDateBefore(now)
+activate REPO
+REPO -> DB : JPA xóa refresh_tokens theo expiry_date
+DB --> REPO : số dòng đã xóa
+REPO --> SVC : count
+deactivate REPO
+SVC -> SVC : Ghi log số token đã dọn
+deactivate SVC
+
+note over SCHED, DB
+  Tác vụ nền chạy trên server (không do người dùng gọi).
+  Chỉ dọn token đã hết hạn; token còn hạn giữ nguyên.
+  Khác với "Làm mới token" (client tự gọi khi access
+  token hết hạn — seq-04).
+end note
+@enduml

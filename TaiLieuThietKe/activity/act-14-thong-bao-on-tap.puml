@@ -1,0 +1,40 @@
+@startuml act-14-thong-bao-on-tap
+title Thông báo ôn tập (Android)
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Android đăng ký lịch nhắc định kỳ
+(AlarmManager / WorkManager)
+theo giờ ôn người dùng đã chọn;
+:Đến giờ hẹn, tiến trình nền thức dậy;
+:Gọi API lấy số từ cần ôn hôm nay
+(kèm access token);
+if (Gọi API thành công?) then (không)
+  :Không hiển thị thông báo; <<#FFEBEE>>
+  :Ghi log lỗi
+  (mất mạng / backend lỗi 5xx);
+  :Hẹn lần nhắc kế tiếp;
+else (có)
+  :Nhận số từ cần ôn (dueCount);
+  if (dueCount > 0?) then (không)
+    :Không hiển thị thông báo
+    (hôm nay không có từ cần ôn); <<#ECEFF1>>
+    :Hẹn lần nhắc kế tiếp;
+  else (có)
+    :Hiển thị thông báo
+    "Hôm nay bạn có N từ cần ôn";
+    if (Người dùng bấm vào thông báo?) then (có)
+      :Mở thẳng tab Ôn tập;
+    else (không)
+      :Thông báo nằm trong khay
+      đến lần nhắc sau;
+    endif
+  endif
+endif
+stop
+@enduml

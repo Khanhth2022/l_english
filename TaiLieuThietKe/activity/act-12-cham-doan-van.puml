@@ -1,0 +1,31 @@
+@startuml act-12-cham-doan-van
+title Chấm đoạn văn (AI, hàm nội bộ)
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Nhận đoạn văn cần chấm;
+:Validate đoạn văn
+(không rỗng, là đoạn văn tiếng Anh);
+if (Đoạn văn hợp lệ?) then (không)
+  #FFEBEE:Trả lỗi 400
+  "Đoạn văn gửi lên không hợp lệ";
+else (có)
+  :Gọi AI chấm:
+  score (0..10), câu đã sửa (correctedText),
+  lỗi sai (incorrect), cụm đúng (correction),
+  giải thích (explanation);
+  if (AI trả lời được?) then (không)
+    #FFEBEE:Trả lỗi 502
+    "Dịch vụ AI tạm thời không khả dụng";
+  else (có)
+    :Trả kết quả cho bên gọi (Thêm đoạn văn);
+    :Hiển thị lên giao diện;
+  endif
+endif
+stop
+@enduml

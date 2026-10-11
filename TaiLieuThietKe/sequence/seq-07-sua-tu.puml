@@ -1,0 +1,112 @@
+@startuml seq-07-sua-tu
+title Sequence Diagram — Sửa từ
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "JwtFilter\n«config»" as JWT
+participant "WordController" as CTRL
+participant "WordService" as SVC
+participant "WordRepository" as REPO
+database "Database" as DB
+
+User -> UI : Sửa nội dung từ, bấm Lưu
+activate UI
+UI -> JWT : PUT /api/words/{id} (WordForm) + token
+activate JWT
+JWT -> JWT : Xác thực JWT
+
+alt Token không hợp lệ / hết hạn
+    JWT --> UI : 401 "Token không hợp lệ hoặc hết hạn"
+    UI --> User : Yêu cầu đăng nhập lại
+else Token hợp lệ
+    JWT -> CTRL : Chuyển tiếp (userId, id, form)
+    deactivate JWT
+    activate CTRL
+    CTRL -> SVC : updateWord(userId, id, form)
+    activate SVC
+    SVC -> REPO : findById(id)
+    activate REPO
+    REPO -> DB : JPA đọc words theo id
+    DB --> REPO : Word / null
+    REPO --> SVC : Optional<Word>
+    deactivate REPO
+    SVC -> SVC : Kiểm tra Word.user_id == userId ?
+
+    alt Không phải chủ sở hữu (hoặc không tồn tại)
+        SVC --> CTRL : ném AccessDeniedException
+        CTRL --> UI : 403 "Không có quyền sửa từ này"
+        UI --> User : Hiển thị lỗi
+    else Là chủ sở hữu
+        SVC -> REPO : findById(id) — lấy kèm Word.values
+        activate REPO
+        REPO -> DB : JPA đọc word_values theo word_id
+        DB --> REPO : List<WordValue> (nhiều nghĩa)
+        REPO --> SVC : Word + values
+        deactivate REPO
+        SVC -> REPO : existsByUserIdAndEnglishAndIdNot\n(userId, englishMới, id)
+        activate REPO
+        REPO -> DB : JPA kiểm tra trùng với từ KHÁC trong sổ
+        DB --> REPO : có / không
+        REPO --> SVC : boolean
+        deactivate REPO
+        alt english mới trùng một từ khác của user
+            SVC --> CTRL : ném lỗi trùng (UNIQUE user_id + english)
+            CTRL --> UI : 409 "Từ này đã có trong sổ của bạn"
+            UI --> User : Báo lỗi trùng từ
+        else Không trùng
+            SVC -> SVC : Cập nhật english / level\ntrên Word đã quản lý
+            SVC -> SVC : Đồng bộ List<WordValue> theo id:\nsửa dòng cũ · thêm dòng mới ·\nxóa dòng bị bỏ (orphanRemoval)
+            SVC -> REPO : save(Word đã cập nhật)
+            activate REPO
+            REPO -> DB : JPA cập nhật words\n(english, level, updated_at) theo id
+            REPO -> DB : JPA upsert/delete word_values theo word_id\n(vietnamese, example, example_translation,\npronunciation, part_of_speech) — MỖI NGHĨA 1 DÒNG
+            REPO --> SVC : Word đã lưu
+            deactivate REPO
+            SVC --> CTRL : WordDto
+            CTRL --> UI : 200 "Sửa từ thành công" + WordDto
+            UI --> User : Hiển thị từ đã sửa
+        end
+    end
+    deactivate SVC
+    deactivate CTRL
+end
+deactivate UI
+
+note over SVC, DB
+  Kiểm tra sở hữu (403) chống IDOR —
+  sửa tài nguyên của người khác.
+end note
+
+note over SVC, DB
+  Đổi english sang từ khác trùng trong sổ → 409
+  (guard nghiệp vụ cho UNIQUE (user_id, english),
+  tránh DB ném lỗi 500).
+end note
+
+note over SVC, DB
+  Word.values là composition (cascade + orphanRemoval):
+  1 từ - NHIỀU nghĩa, mỗi nghĩa 1 dòng word_values.
+  Sửa từ đồng bộ danh sách theo id trong cùng transaction
+  (sửa cũ / thêm mới / xóa dòng bị bỏ).
+end note
+@enduml

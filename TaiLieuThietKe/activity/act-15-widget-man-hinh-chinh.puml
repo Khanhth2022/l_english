@@ -1,0 +1,32 @@
+@startuml act-15-widget-man-hinh-chinh
+title Widget màn hình chính (Android)
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Người dùng thêm widget LEnglish
+vào màn hình chính;
+:Android khởi tạo AppWidgetProvider
+và lên lịch cập nhật định kỳ;
+:Gọi API lấy số từ cần ôn
+(kèm access token);
+if (Gọi API thành công?) then (không)
+  :Widget hiển thị
+  "Không tải được dữ liệu";
+  :Thử lại ở lần cập nhật kế tiếp;
+else (có)
+  :Cập nhật widget:
+  "N từ cần ôn hôm nay";
+endif
+if (Người dùng bấm vào widget?) then (có)
+  :Mở thẳng tab Ôn tập;
+else (không)
+  :Giữ nguyên widget
+  đến lần cập nhật kế tiếp;
+endif
+stop
+@enduml

@@ -1,0 +1,32 @@
+@startuml act-02-dang-nhap
+title Đăng nhập
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Người dùng gửi username + password;
+:Validate thông tin;
+if (Thông tin hợp lệ?) then (không)
+  #FFEBEE:Trả lỗi 401
+  "Đăng nhập thất bại";
+else (có)
+  :Tìm User theo username
+  trong database;
+  if (User tồn tại và mật khẩu
+  khớp (BCrypt)?) then (không)
+    #FFEBEE:Trả lỗi 401
+    "Đăng nhập thất bại";
+  else (có)
+    :Tạo access token (JWT)
+    + refresh token;
+    :Lưu refresh token vào database
+    (kèm expiryDate);
+    :Trả cặp token cho người dùng;
+  endif
+endif
+stop
+@enduml

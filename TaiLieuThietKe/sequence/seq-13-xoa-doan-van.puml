@@ -1,0 +1,77 @@
+@startuml seq-13-xoa-doan-van
+title Sequence Diagram — Xóa đoạn văn
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "JwtFilter\n«config»" as JWT
+participant "PhraseController" as CTRL
+participant "PhraseService" as SVC
+participant "PhraseRepository" as REPO
+database "Database" as DB
+
+User -> UI : Bấm Xóa đoạn văn
+activate UI
+UI -> JWT : DELETE /api/phrases/{id} + token
+activate JWT
+JWT -> JWT : Xác thực JWT
+
+alt Token không hợp lệ / hết hạn
+    JWT --> UI : 401 "Token không hợp lệ hoặc hết hạn"
+    UI --> User : Yêu cầu đăng nhập lại
+else Token hợp lệ
+    JWT -> CTRL : Chuyển tiếp (userId, id)
+    deactivate JWT
+    activate CTRL
+    CTRL -> SVC : deletePhrase(userId, id)
+    activate SVC
+    SVC -> REPO : findById(id)
+    activate REPO
+    REPO -> DB : JPA đọc phrases theo id
+    DB --> REPO : Phrase / null
+    REPO --> SVC : Optional<Phrase>
+    deactivate REPO
+    SVC -> SVC : Kiểm tra Phrase.user_id == userId ?
+
+    alt Không phải chủ sở hữu (hoặc không tồn tại)
+        SVC --> CTRL : ném AccessDeniedException
+        CTRL --> UI : 403 "Không có quyền xóa đoạn văn này"
+        UI --> User : Hiển thị lỗi
+    else Là chủ sở hữu
+        SVC -> REPO : deleteById(id)
+        activate REPO
+        REPO -> DB : JPA xóa phrases theo id\n(grammar_errors xóa theo cascade)
+        deactivate REPO
+        SVC --> CTRL : thành công
+        CTRL --> UI : 200 "Xóa đoạn văn thành công"
+        UI --> User : Cập nhật danh sách trên màn hình
+    end
+    deactivate SVC
+    deactivate CTRL
+end
+deactivate UI
+
+note over SVC, DB
+  Composition Phrase *–– GrammarError: xóa Phrase
+  kéo theo xóa grammar_errors (cascade + orphanRemoval).
+end note
+@enduml

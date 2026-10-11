@@ -1,0 +1,61 @@
+@startuml act-20-them-tu-theo-chu-de
+title Thêm từ mới theo chủ đề (AI sinh 10 từ)
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Người dùng nhập một chủ đề
+và gửi yêu cầu tạo 10 từ mới
+(POST /api/words/generate-topic + token);
+:Kiểm tra xác thực JWT;
+if (Token hợp lệ?) then (không)
+  #FFEBEE:Trả lỗi 401
+  "Token không hợp lệ hoặc hết hạn";
+  stop
+else (có)
+  :Gọi AI xác nhận input
+  có phải một chủ đề có nghĩa?;
+  if (Là chủ đề hợp lệ?) then (không)
+    #FFEBEE:Trả lỗi 400
+    "Chủ đề không hợp lệ, vui lòng nhập lại";
+    stop
+  else (có)
+    :Lấy danh sách từ đã có trong sổ
+    của người dùng (words theo user_id);
+    :Gọi AI sinh 10 từ mới theo chủ đề,
+    mỗi từ kèm nghĩa, phiên âm, từ loại,
+    ví dụ, level — tránh trùng
+    danh sách từ đã gửi;
+    if (AI trả lời được?) then (không)
+      #FFEBEE:Trả lỗi 502
+      "Dịch vụ AI tạm thời không khả dụng";
+      stop
+    else (có)
+      repeat
+        :Lấy một từ trong danh sách 10 từ;
+        if (Từ đã có trong word_cache?) then (chưa)
+          :Lưu từ vào word_cache;
+          :Lưu thông tin AI sinh
+          vào word_cache_values;
+        else (có)
+          :Dùng lại bản ghi cache có sẵn,
+          không ghi thêm cache;
+        endif
+        :Lưu từ vào words
+        (gắn user_id, review_count = 0);
+        :Lưu từng nghĩa vào word_values
+        (mỗi nghĩa một dòng);
+      repeat while (Còn từ chưa xử lý?) is (có)
+      ->không;
+      :Trả 201 + danh sách 10 từ mới;
+    endif
+  endif
+endif
+:Client hiển thị 10 từ vừa thêm
+vào sổ của người dùng;
+stop
+@enduml

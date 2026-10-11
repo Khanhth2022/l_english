@@ -1,0 +1,66 @@
+@startuml seq-17-scan-ocr-doan-van
+title Sequence Diagram — Quét OCR lấy văn bản vào ô Chấm đoạn văn (Android)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Màn Chấm đoạn văn\n(LEnglish)" as App
+participant "Android OS\n(quyền / camera)" as OS
+participant "ML Kit OCR\n(trên thiết bị)" as OCR
+participant "Backend API" as API
+
+User -> App : Bấm "Quét ảnh"
+activate App
+App -> User : Yêu cầu chọn ảnh (thư viện / chụp mới)
+
+alt Chưa có quyền truy cập ảnh/camera
+    App -> OS : Yêu cầu quyền (camera / thư viện)
+    activate OS
+    OS --> User : Hộp thoại xin quyền
+    alt Người dùng từ chối
+        OS --> App : Từ chối
+        App --> User : Dừng, thông báo cần quyền
+    else Người dùng cấp quyền
+        OS --> App : Cấp quyền
+    end
+    deactivate OS
+end
+
+App -> App : Tiền xử lý ảnh\n(cắt, tăng tương phản, nhị phân hóa)
+App -> OCR : Chạy OCR trên ảnh
+activate OCR
+OCR --> App : Chuỗi văn bản thô
+deactivate OCR
+
+alt Không nhận dạng được văn bản
+    App --> User : "Không tìm thấy văn bản trong ảnh"
+else Có văn bản
+    App -> App : Điền văn bản vào ô đoạn văn (cho phép xem lại / chỉnh sửa)
+    App -> API : Chấm đoạn văn (AI) — xem seq-11 / seq-12
+    activate API
+    API --> App : score + lỗi + câu sửa
+    deactivate API
+    App --> User : Hiển thị kết quả chấm
+end
+deactivate App
+
+note over App, OCR
+  OCR chạy on-device (ML Kit) — không gửi ảnh lên server.
+end note
+@enduml

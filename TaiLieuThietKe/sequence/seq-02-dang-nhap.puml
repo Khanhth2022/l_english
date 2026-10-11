@@ -1,0 +1,77 @@
+@startuml seq-02-dang-nhap
+title Sequence Diagram — Đăng nhập
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "AuthController" as CTRL
+participant "AuthService" as SVC
+participant "UserRepository" as UREPO
+participant "RefreshTokenRepository" as TREPO
+database "Database" as DB
+
+User -> UI : Nhập username + password, bấm Đăng nhập
+activate UI
+UI -> CTRL : POST /api/auth/login (LoginForm)
+activate CTRL
+CTRL -> CTRL : Validate thông tin
+
+alt Thông tin không hợp lệ
+    CTRL --> UI : 401 "Đăng nhập thất bại"
+    UI --> User : Hiển thị lỗi
+else Hợp lệ
+    CTRL -> SVC : login(form)
+    activate SVC
+    SVC -> UREPO : findByUsername(username)
+    activate UREPO
+    UREPO -> DB : JPA đọc users theo username
+    DB --> UREPO : User / null
+    UREPO --> SVC : Optional<User>
+    deactivate UREPO
+    SVC -> SVC : So khớp mật khẩu (BCrypt.matches)
+
+    alt User không tồn tại HOẶC sai mật khẩu
+        SVC --> CTRL : ném BadCredentialsException
+        CTRL --> UI : 401 "Đăng nhập thất bại"
+        UI --> User : Hiển thị lỗi
+    else Đúng thông tin đăng nhập
+        SVC -> SVC : Tạo access token (JWT)\n+ refresh token
+        SVC -> TREPO : save(RefreshToken + expiryDate)
+        activate TREPO
+        TREPO -> DB : JPA ghi refresh_tokens
+        DB --> TREPO : ok
+        TREPO --> SVC : đã lưu
+        deactivate TREPO
+        SVC --> CTRL : { accessToken, refreshToken }
+        deactivate SVC
+        CTRL --> UI : 200 + cặp token
+        UI --> User : Đăng nhập thành công
+    end
+end
+deactivate CTRL
+deactivate UI
+
+note over SVC, DB
+  Access token (JWT) ngắn hạn, stateless.
+  Refresh token lưu DB kèm expiryDate để rotation.
+end note
+@enduml

@@ -1,0 +1,146 @@
+@startuml LEnglish_UseCase
+' ==========================================================================
+'  LEnglish — Use Case Diagram (v6 — dọn bố cục, dựa trên khung v5)
+'  Thay đổi so với v5 (docs\use-case-diagram.backup-v5.puml):
+'    - Note rút gọn còn 1–2 dòng (dây dẫn ngắn, ít rối), chi tiết đầy đủ
+'      chuyển vào legend + docs\README.md
+'    - ranksep 70 → 55 cho gọn chiều dọc
+'    - Giữ nguyên 100% quan hệ UML (actor, include, extend, AI)
+'  Render: java -jar plantuml.jar -charset UTF-8 -tpng/-tsvg (chạy 2 lượt,
+'          plantuml chỉ nhận flag -t cuối; bắt buộc -charset UTF-8 để
+'          tiếng Việt không vỡ font).
+'  Layout: left to right direction + smetana (không cần Graphviz).
+'          Actor Người dùng bên trái (một cụm mũi tên), 4 package xếp dọc,
+'          AI/Timer ở rìa — ít đường chéo nhất trong các phương án đã thử
+'          (v6 top-down bị rối dây chéo, LTR là bản dễ nhìn nhất).
+'          Lưu ý: nếu thêm lại 'note' lớn cho UC, smetana + LTR có thể đẩy
+'          note/legend ra toạ độ âm và bị cắt — thay vào đó ghi thông tin
+'          vào legend ở cuối file.
+' ==========================================================================
+!pragma layout smetana
+left to right direction
+skinparam dpi 110
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam roundCorner 12
+skinparam packageStyle rectangle
+skinparam nodesep 16
+skinparam ranksep 55
+skinparam actorStyle awesome
+skinparam actor {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+  FontColor #0D47A1
+  FontStyle bold
+}
+skinparam usecase {
+  BackgroundColor #F8FBF8
+  BorderColor #2E7D32
+  FontColor #1B2631
+  ArrowColor #607D8B
+}
+skinparam package {
+  BackgroundColor #FAFAFA
+  BorderColor #B0BEC5
+  FontColor #37474F
+  FontStyle bold
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F9A825
+  FontSize 12
+}
+skinparam legend {
+  BackgroundColor #FAFAFA
+  BorderColor #90A4AE
+  FontSize 13
+}
+
+actor "Người dùng" as User
+actor "AI" as AI
+actor "Bộ định thời\n(hệ thống)" as Timer <<time>>
+
+rectangle "LEnglish" {
+  package "Quản lý tài khoản" {
+    usecase "Tạo tài khoản" as UC_Register
+    usecase "Đăng nhập" as UC_Login
+    usecase "Đăng xuất" as UC_Logout
+    usecase "Làm mới token" as UC_Refresh #E3F2FD
+    usecase "Dọn refresh token hết hạn" as UC_CleanupToken #E3F2FD
+  }
+  package "Quản lý từ" {
+    usecase "Xem từ" as UC_ViewWord
+    usecase "Thêm từ" as UC_AddWord
+    usecase "Sửa từ" as UC_EditWord
+    usecase "Xóa từ" as UC_DeleteWord
+    usecase "Ôn tập từ vựng" as UC_Review
+    usecase "Xác nhận ôn tập" as UC_ConfirmReview
+    usecase "Sinh nghĩa từ" as UC_GenMeaning #FFF8E1
+    usecase "Thêm từ theo chủ đề\n(10 từ)" as UC_AddByTopic #FFF8E1
+  }
+  package "Quản lý đoạn văn" {
+    usecase "Xem đoạn văn" as UC_ViewPhrase
+    usecase "Thêm đoạn văn" as UC_AddPhrase
+    usecase "Xóa đoạn văn" as UC_DeletePhrase
+    usecase "Chấm đoạn văn" as UC_Grading #FFF8E1
+  }
+  package "Tính năng Android" {
+    usecase "Thông báo ôn tập" as UC_Notify #E3F2FD
+    usecase "Widget màn hình chính" as UC_Widget #E3F2FD
+    usecase "Thêm từ (bôi đen)" as UC_AddFromSelection
+    usecase "Quét OCR trong ảnh" as UC_ScanOCR
+  }
+}
+
+' ——— Người dùng khởi tạo (mũi tên liền) ———
+User --> UC_Register
+User --> UC_Login
+User --> UC_Logout
+User --> UC_Refresh
+User --> UC_ViewWord
+User --> UC_AddWord
+User --> UC_AddByTopic
+User --> UC_EditWord
+User --> UC_DeleteWord
+User --> UC_Review
+User --> UC_ConfirmReview
+User --> UC_ViewPhrase
+User --> UC_AddPhrase
+User --> UC_DeletePhrase
+User --> UC_AddFromSelection
+User --> UC_ScanOCR
+
+' ——— Kích hoạt theo thời gian / chạy ngầm ———
+Timer --> UC_CleanupToken
+Timer --> UC_Notify
+Timer --> UC_Widget
+
+' ——— include ———
+UC_AddFromSelection ..> UC_AddWord : <<include>>
+UC_AddPhrase ..> UC_Grading : <<include>>
+UC_Review ..> UC_ViewWord : <<extend>>
+UC_ConfirmReview ..> UC_Review : <<include>>
+
+' ——— Ghi chú cho UC_Review & UC_AddByTopic đã chuyển vào legend (dưới cùng)
+' ——— để tránh dây dẫn note chéo qua sơ đồ.
+
+' ——— extend ———
+UC_GenMeaning ..> UC_AddWord : <<extend>>
+UC_ScanOCR ..> UC_Grading : <<extend>>
+
+' ——— Actor AI đảm nhận (riêng "Thêm từ theo chủ đề" người dùng gọi trực tiếp, AI sinh dữ liệu) ———
+UC_GenMeaning --> AI
+UC_Grading --> AI
+UC_AddByTopic --> AI
+
+' ——— Legend: gộp cả ý nghĩa ký hiệu + ghi chú luồng đặc biệt ———
+legend bottom
+  |= Ký hiệu |= Ý nghĩa |
+  |<#F8FBF8> Mũi tên liền | Người dùng / actor khởi tạo |
+  |<#F8FBF8> Mũi tên đứt | «include» / «extend» |
+  |<#FFF8E1> Ô vàng | AI sinh dữ liệu — *Sinh nghĩa từ*, *Chấm đoạn văn*, *Thêm từ theo chủ đề* |
+  |<#E3F2FD> Ô xanh | Tự động / chạy ngầm (client tự gọi hoặc server/thiết bị định kỳ) |
+  |<#FAFAFA> *Ôn tập từ vựng* | Chỉ là tab lọc phía client trên dữ liệu "Xem từ", không gọi server; chỉ *Xác nhận ôn tập* gọi server (act-19/seq-19) |
+  |<#FFFDE7> *Thêm từ theo chủ đề* | AI duyệt chủ đề → loại trừ từ đã có → sinh 10 từ (nghĩa, phiên âm, từ loại, ví dụ) vào words + word_values, kèm word_cache — act-20/seq-20 |
+endlegend
+@enduml

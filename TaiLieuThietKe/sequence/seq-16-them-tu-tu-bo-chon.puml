@@ -1,0 +1,71 @@
+@startuml seq-16-them-tu-tu-bo-chon
+title Sequence Diagram — Thêm từ từ văn bản bôi đen (Android)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Android OS\n(Text toolbar)" as OS
+participant "Màn hình Thêm từ\n(LEnglish)" as App
+participant "AI" as AI #FFF8E1
+participant "Backend API" as API
+
+User -> OS : Bôi đen một từ ở ứng dụng bất kỳ
+activate OS
+OS --> User : Hiện thanh công cụ nổi (Sao chép, Chọn tất cả, ...)
+User -> OS : Chọn "Thêm vào từ điển" (ACTION_PROCESS_TEXT)
+OS -> App : Mở màn Thêm từ, điền sẵn từ đã bôi đen
+deactivate OS
+activate App
+App --> User : Hiển thị form (từ điền sẵn)
+
+opt Người dùng bấm "Gợi ý nghĩa"
+    App -> AI : Sinh nghĩa từ (xem seq-09)
+    activate AI
+    AI --> App : nghĩa, phiên âm, từ loại, ví dụ
+    deactivate AI
+end
+
+User -> App : Kiểm tra / bổ sung thông tin
+
+alt Người dùng bấm Lưu
+    ref over App, API : «include» Thêm từ — xem seq-06\n(lưu words + word_values)
+    App -> API : POST /api/words (WordForm) + token
+    activate API
+    alt Thêm từ thành công
+        API --> App : 201 thành công
+        App -> App : Đóng màn Thêm từ
+        App --> User : Quay về ứng dụng trước đó
+    else Lỗi (401 token hết hạn / 409 từ đã tồn tại)
+        API --> App : lỗi 401 / 409
+        App --> User : Hiển thị lỗi, giữ màn để sửa
+    end
+    deactivate API
+else Người dùng bấm Hủy / Back
+    App -> App : Đóng màn, không lưu
+    App --> User : Quay về ứng dụng trước đó
+end
+deactivate App
+
+note over App, API
+  Màn Thêm từ chỉ gửi đúng WordForm mà người dùng chốt.
+  Nghĩa / phiên âm / từ loại / ví dụ lấy từ "Gợi ý nghĩa" (seq-09)
+  là gợi ý điền vào form — server vẫn ghi chúng
+  vào word_values khi lưu (seq-06), không có luồng ghi DB riêng.
+end note
+@enduml

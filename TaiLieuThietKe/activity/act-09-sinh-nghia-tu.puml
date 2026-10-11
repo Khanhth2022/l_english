@@ -1,0 +1,41 @@
+@startuml act-09-sinh-nghia-tu
+title Sinh nghĩa từ (AI)
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Nhận từ tiếng Anh cần sinh nghĩa;
+:Kiểm tra từ đã có trong word_cache?;
+if (Đã có trong cache?) then (có)
+  :Lấy nghĩa có sẵn từ word_cache;
+  :Trả kết quả cho người dùng;
+else (chưa)
+  :Kiểm tra từ gửi lên
+  có phải từ tiếng Anh thực?;
+  if (Là từ tiếng Anh hợp lệ?) then (không)
+    #FFEBEE:Trả lỗi 400
+    "Từ gửi lên không phải một từ tiếng Anh";
+    stop
+  else (có)
+    :Gọi AI sinh thông tin từ
+    (nghĩa, phiên âm, từ loại, ví dụ...);
+    if (AI trả lời được?) then (không)
+      #FFEBEE:Trả lỗi 502
+      "Dịch vụ AI tạm thời không khả dụng";
+      stop
+    else (có)
+      :Lưu từ mới vào word_cache;
+      :Lưu thông tin AI sinh
+      (nghĩa, ví dụ, dịch ví dụ, phiên âm, từ loại)
+      vào word_cache_values;
+      :Trả kết quả cho người dùng;
+    endif
+  endif
+endif
+:Hiển thị nghĩa lên giao diện;
+stop
+@enduml

@@ -1,0 +1,54 @@
+@startuml seq-15-widget-man-hinh-chinh
+title Sequence Diagram — Widget màn hình chính (Android)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Android\n(Launcher)" as OS
+participant "AppWidgetProvider" as Widget
+participant "Backend API" as API
+participant "Ứng dụng\nLEnglish" as App
+
+User -> OS : Thêm widget LEnglish vào màn hình chính
+activate OS
+OS -> Widget : Khởi tạo AppWidgetProvider\n+ lên lịch cập nhật định kỳ
+deactivate OS
+activate Widget
+
+== Mỗi chu kỳ cập nhật ==
+Widget -> API : GET /api/words/due-count + access token
+activate API
+alt Gọi API thất bại
+    API --> Widget : lỗi
+    Widget -> Widget : Hiển thị "Không tải được dữ liệu"\n(thử lại lần cập nhật kế tiếp)
+else Thành công
+    API --> Widget : dueCount
+    deactivate API
+    Widget -> Widget : Cập nhật widget "N từ cần ôn hôm nay"
+end
+
+opt Người dùng bấm vào widget
+    User -> Widget : Chạm widget
+    Widget -> App : Mở app (deep link tab Ôn tập)
+    activate App
+    App -> App : Mở thẳng tab Ôn tập
+    deactivate App
+end
+deactivate Widget
+@enduml

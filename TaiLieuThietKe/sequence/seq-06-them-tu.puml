@@ -1,0 +1,91 @@
+@startuml seq-06-them-tu
+title Sequence Diagram — Thêm từ
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "JwtFilter\n«config»" as JWT
+participant "WordController" as CTRL
+participant "WordService" as SVC
+participant "WordRepository" as REPO
+database "Database" as DB
+
+User -> UI : Điền thông tin từ vào form, bấm Lưu
+activate UI
+UI -> JWT : POST /api/words (WordForm) + token
+activate JWT
+JWT -> JWT : Xác thực JWT
+
+alt Token không hợp lệ / hết hạn
+    JWT --> UI : 401 "Token không hợp lệ hoặc hết hạn"
+    UI --> User : Yêu cầu đăng nhập lại
+else Token hợp lệ
+    JWT -> CTRL : Chuyển tiếp (userId, WordForm)
+    deactivate JWT
+    activate CTRL
+    CTRL -> SVC : addWord(userId, form)
+    activate SVC
+    SVC -> REPO : existsByUserIdAndEnglish(userId, english)
+    activate REPO
+    REPO -> DB : JPA kiểm tra tồn tại theo (user_id, english)
+    DB --> REPO : có / không
+    REPO --> SVC : boolean
+    deactivate REPO
+    alt Từ đã có trong sổ của user
+        SVC --> CTRL : ném lỗi trùng
+        deactivate SVC
+        CTRL --> UI : 409 "Từ này đã có trong sổ của bạn"
+        deactivate CTRL
+        UI --> User : Báo lỗi trùng từ
+    else Chưa có
+        SVC -> REPO : save(Word gắn user_id)
+        activate REPO
+        REPO -> DB : JPA ghi words (english, level, user_id,\nreview_count = 0, created_at, updated_at)
+        DB --> REPO : id
+        REPO --> SVC : Word đã lưu
+        deactivate REPO
+        SVC -> REPO : saveAll(List<WordValue> gắn word_id)
+        activate REPO
+        REPO -> DB : JPA ghi word_values — MỖI NGHĨA 1 DÒNG\n(word_id, vietnamese, example,\nexample_translation, pronunciation, part_of_speech)
+        DB --> REPO : ok
+        REPO --> SVC : danh sách WordValue
+        deactivate REPO
+        SVC -> SVC : Map Entity → WordDto
+        SVC --> CTRL : WordDto
+        deactivate SVC
+        CTRL --> UI : 201 "Thêm từ thành công" + WordDto
+        deactivate CTRL
+        UI --> User : Hiển thị từ mới lên màn hình
+    end
+end
+deactivate UI
+
+note over SVC, DB
+  Ràng buộc UNIQUE (user_id, english) là lớp chặn cuối:
+  mỗi user không trùng từ, nhưng 2 user khác nhau
+  vẫn được có cùng từ.
+  Word 1--n WordValue: một từ lưu được NHIỀU nghĩa,
+  mỗi nghĩa là một dòng word_values riêng.
+  Word và WordValue lưu trong CÙNG một transaction:
+  ghi words -> lấy id -> saveAll(word_values).
+end note
+@enduml

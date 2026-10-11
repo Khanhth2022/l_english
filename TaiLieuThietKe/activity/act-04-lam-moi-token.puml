@@ -1,0 +1,30 @@
+@startuml act-04-lam-moi-token
+title Làm mới token (Hệ thống)
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Hệ thống nhận refresh token gửi lên;
+:Tìm refresh token trong database;
+if (Có trong database?) then (không)
+  #FFEBEE:Trả lỗi 401
+  "Đăng nhập thất bại";
+else (có)
+  :Kiểm tra expiryDate còn hiệu lực?;
+  if (Đã hết hạn?) then (có)
+    #FFEBEE:Xóa token hết hạn →
+    Trả lỗi 401 "Phiên đăng nhập hết hạn";
+  else (còn)
+    :Xóa refresh token cũ
+    (token rotation);
+    :Tạo access token + refresh token mới;
+    :Lưu refresh token mới vào database;
+    :Trả cặp token mới cho người dùng;
+  endif
+endif
+stop
+@enduml

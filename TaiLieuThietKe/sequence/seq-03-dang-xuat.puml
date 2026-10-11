@@ -1,0 +1,55 @@
+@startuml seq-03-dang-xuat
+title Sequence Diagram — Đăng xuất
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "AuthController" as CTRL
+participant "AuthService" as SVC
+participant "RefreshTokenRepository" as TREPO
+database "Database" as DB
+
+User -> UI : Bấm Đăng xuất
+activate UI
+UI -> CTRL : POST /api/auth/logout (refreshToken)
+activate CTRL
+CTRL -> SVC : logout(refreshToken)
+activate SVC
+SVC -> TREPO : deleteByToken(refreshToken)
+activate TREPO
+TREPO -> DB : JPA xóa refresh_tokens theo token
+DB --> TREPO : ok
+TREPO --> SVC : đã xóa
+deactivate TREPO
+SVC --> CTRL : thành công
+deactivate SVC
+CTRL --> UI : 200 "Đăng xuất thành công"
+deactivate CTRL
+UI --> User : Đã đăng xuất
+deactivate UI
+
+note over UI, DB
+  Access token (JWT) KHÔNG thu hồi ngay — vẫn hiệu lực
+  đến khi hết hạn (stateless). Vì vậy access token phải
+  ngắn hạn (15–60 phút).
+end note
+@enduml

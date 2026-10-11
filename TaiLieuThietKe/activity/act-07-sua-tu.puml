@@ -1,0 +1,42 @@
+@startuml act-07-sua-tu
+title Sửa từ
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Người dùng gửi nội dung sửa từ (kèm token);
+:Kiểm tra token gửi lên;
+if (Token hợp lệ?) then (không)
+  #FFEBEE:Trả lỗi 401
+  "Token không hợp lệ hoặc hết hạn";
+else (có)
+  :Kiểm tra người gửi có sở hữu từ này?;
+  if (Là chủ sở hữu?) then (không)
+    #FFEBEE:Trả lỗi 403
+    "Không có quyền sửa từ này";
+  else (có)
+    :Kiểm tra english mới có trùng từ khác
+    trong sổ của user? (UNIQUE user_id + english);
+    if (Trùng từ khác?) then (có)
+      #FFEBEE:Trả lỗi 409
+      "Từ này đã có trong sổ của bạn";
+    else (không)
+      :Cập nhật words (english, level, updated_at);
+      :Đồng bộ DANH SÁCH word_values (1 từ - nhiều nghĩa):
+      sửa dòng cũ theo id, thêm dòng mới,
+      xóa dòng bị bỏ (orphanRemoval);
+      note right
+        words và word_values cập nhật trong CÙNG
+        một transaction; mỗi nghĩa = 1 dòng.
+      end note
+      :Trả "Sửa từ thành công";
+      :Hiển thị từ đã sửa lên màn hình;
+    endif
+  endif
+endif
+stop
+@enduml

@@ -1,0 +1,69 @@
+@startuml seq-14-thong-bao-on-tap
+title Sequence Diagram — Thông báo ôn tập (Android)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Ứng dụng\nLEnglish" as App
+participant "WorkManager /\nAlarmManager" as Sched
+participant "Tiến trình nền\n(Worker)" as Worker
+participant "Backend API" as API
+participant "Notification\nManager" as Notif
+
+User -> App : Chọn giờ ôn tập
+activate App
+App -> Sched : Đăng ký lịch nhắc định kỳ
+deactivate App
+
+== Đến giờ hẹn ==
+Sched -> Worker : Kích hoạt (tiến trình nền thức dậy)
+activate Worker
+Worker -> API : GET /api/words + access token
+activate API
+
+alt Gọi API thất bại (mất mạng / 5xx)
+    API --> Worker : lỗi
+    Worker -> Worker : Ghi log, không hiển thị thông báo
+    Worker -> Sched : Hẹn lần nhắc kế tiếp
+else Thành công
+    API --> Worker : Words
+    Worker -> Worker : Tính số từ cần ôn (dueCount)
+    deactivate API
+    alt dueCount == 0
+        Worker -> Sched : Hẹn lần kế tiếp (không thông báo)
+    else dueCount > 0
+        Worker -> Notif : Hiển thị "Hôm nay bạn có N từ cần ôn"
+        activate Notif
+        Notif --> User : Hiện thông báo trên khay
+        deactivate Notif
+        opt Người dùng bấm vào thông báo
+            User -> App : Mở ứng dụng
+            activate App
+            App -> App : Mở thẳng tab Ôn tập
+            deactivate App
+        end
+    end
+end
+deactivate Worker
+
+note over Sched, Notif
+  Lịch nhắc chạy nền theo giờ người dùng chọn;
+  mọi nhánh đều hẹn lại lần nhắc kế tiếp.
+end note
+@enduml

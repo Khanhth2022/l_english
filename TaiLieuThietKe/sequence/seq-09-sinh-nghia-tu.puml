@@ -1,0 +1,106 @@
+@startuml seq-09-sinh-nghia-tu
+title Sequence Diagram — Sinh nghĩa từ (AI, cache-first)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "JwtFilter\n«config»" as JWT
+participant "WordController" as CTRL
+participant "WordService" as SVC
+participant "WordCacheRepository" as REPO
+database "Database\n(word_cache)" as DB
+participant "AI" as AI #FFF8E1
+
+User -> UI : Bấm "Gợi ý nghĩa" cho từ tiếng Anh
+activate UI
+UI -> JWT : GET /api/words/generate?english=... + token
+activate JWT
+JWT -> JWT : Xác thực JWT
+alt Token không hợp lệ / hết hạn
+    JWT --> UI : 401 "Token không hợp lệ hoặc hết hạn"
+else Token hợp lệ
+    JWT -> CTRL : Chuyển tiếp (english)
+    deactivate JWT
+    activate CTRL
+    CTRL -> SVC : generateMeaning(english)
+    activate SVC
+    SVC -> REPO : findByEnglish(english)
+    activate REPO
+    REPO -> DB : JPA đọc word_cache theo english
+    DB --> REPO : WordCache / null
+    REPO --> SVC : Optional<WordCache>
+    deactivate REPO
+
+    alt Cache hit (đã có trong word_cache)
+        SVC --> CTRL : nghĩa (lấy từ cache)
+        CTRL --> UI : 200 + nghĩa
+    else Cache miss
+        SVC -> SVC : Kiểm tra có phải từ tiếng Anh thực?
+        alt Không phải từ tiếng Anh hợp lệ
+            SVC --> CTRL : ném InvalidWordException
+            CTRL --> UI : 400 "Từ gửi lên không phải một từ tiếng Anh"
+        else Hợp lệ
+            SVC -> AI : Sinh thông tin từ\n(nghĩa, phiên âm, từ loại, ví dụ...)
+            activate AI
+            alt AI trả lời được
+                AI --> SVC : Dữ liệu từ
+                deactivate AI
+                SVC -> REPO : save(WordCache mới)
+                activate REPO
+                REPO -> DB : JPA ghi word_cache\n(english UNIQUE, level, created_at, updated_at)
+                DB --> REPO : id
+                REPO -> DB : JPA ghi word_cache_values\n(word_cache_id, vietnamese, example,\nexample_translation, pronunciation, part_of_speech)
+                DB --> REPO : ok
+                REPO --> SVC : WordCache đã lưu
+                deactivate REPO
+                SVC --> CTRL : nghĩa (từ AI)
+                CTRL --> UI : 200 + nghĩa
+            else AI lỗi / timeout / hết quota
+                deactivate AI
+                SVC -> SVC : Không cache kết quả lỗi
+                SVC --> CTRL : ném AiServiceException
+                CTRL --> UI : 502 "Dịch vụ AI tạm thời không khả dụng"
+            end
+        end
+    end
+    deactivate SVC
+    deactivate CTRL
+end
+UI --> User : Hiển thị nghĩa lên giao diện
+deactivate UI
+
+note over REPO, AI
+  Cache-first: tra word_cache trước, chỉ cache-miss mới gọi AI.
+  word_cache dùng chung mọi user, KHÔNG có FK user_id, english UNIQUE.
+  Thông tin AI sinh ra nằm ở bảng con word_cache_values
+  (word_cache -> word_cache_values là 1–n, xóa cascade):
+  ghi word_cache -> lấy id -> ghi word_cache_values,
+  cùng một transaction. Cache hit chỉ đọc word_cache là đủ.
+end note
+
+note over SVC, AI
+  Luồng này KHÔNG ghi thẳng vào bảng words / word_values của user:
+  kết quả chỉ vào word_cache (+ word_cache_values).
+  Từ được lưu vào bộ từ của user qua luồng Thêm từ (seq-06),
+  khi đó WordService copy dữ liệu từ cache sang word_values.
+end note
+@enduml

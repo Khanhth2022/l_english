@@ -1,0 +1,2376 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LEnglish — Slide Tổng Hợp Kiến Trúc & Luồng Hoạt Động Các Chức Năng</title>
+  <!-- Tailwind CSS via allowlisted gstatic CDN -->
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --accent: #0284c7;
+      --surface: #ffffff;
+      --bg: #0f172a;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #0b1120;
+      color: #0f172a;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .slide-container {
+      height: calc(100vh - 120px);
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+    .slide-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .slide-container::-webkit-scrollbar-thumb {
+      background-color: #94a3b8;
+      border-radius: 9999px;
+    }
+
+    .slide {
+      display: none;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+    }
+    .slide.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .slide > div {
+      width: 100%;
+      max-width: 1280px;
+      min-height: 100%;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+    }
+
+    .diagram-img {
+      max-height: 520px;
+      width: auto;
+      object-fit: contain;
+      transition: transform 0.2s ease;
+      cursor: zoom-in;
+    }
+    .diagram-img:hover {
+      transform: scale(1.015);
+    }
+
+    .badge-primary { background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .badge-success { background-color: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-warning { background-color: #fefce8; color: #a16207; border: 1px solid #fef08a; }
+    .badge-danger  { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .badge-purple  { background-color: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+    .badge-cyan    { background-color: #ecfeff; color: #0e7490; border: 1px solid #a5f3fc; }
+
+    @media print {
+      body {
+        overflow: visible;
+        height: auto;
+        background: white;
+      }
+      .slide-container {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+      }
+      .slide {
+        display: block !important;
+        opacity: 1 !important;
+        transform: none !important;
+        page-break-after: always;
+        margin-bottom: 2rem;
+      }
+      header, footer, #tocModal, #zoomModal, .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="flex flex-col select-none">
+
+  <!-- TOP HEADER / CONTROL BAR -->
+  <header class="h-16 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between px-6 z-30 shrink-0">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-black text-lg shadow-md text-white">
+        L
+      </div>
+      <div>
+        <h1 class="text-sm md:text-base font-bold tracking-tight text-white flex items-center gap-2">
+          LEnglish <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-normal border border-blue-400/30">System Specifications</span>
+        </h1>
+        <p class="text-xs text-slate-400 hidden sm:block">Sơ đồ Thực thể ERD &bull; Tổng hợp &bull; Giải thích Luồng Hoạt động</p>
+      </div>
+    </div>
+
+    <!-- Center Slide Indicator -->
+    <div class="flex items-center space-x-3">
+      <button onclick="toggleToc()" title="Danh sách trang (T)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700">
+        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+        <span>Mục lục</span>
+      </button>
+
+      <div class="text-xs font-medium text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/80 flex items-center gap-1">
+        <span>Trang</span>
+        <span id="currentSlideNum" class="font-bold text-blue-400 text-sm">1</span>
+        <span>/</span>
+        <span id="totalSlidesNum" class="text-slate-400">32</span>
+      </div>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center space-x-2">
+      <button onclick="prevSlide()" title="Trang trước (Phím ←)" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <button onclick="nextSlide()" title="Trang sau (Phím → / Space)" class="p-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition shadow-sm">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+      <button onclick="toggleFullscreen()" title="Toàn màn hình (F)" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition hidden md:block">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- PROGRESS BAR -->
+  <div class="w-full h-1 bg-slate-800 shrink-0">
+    <div id="progressBar" class="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400 transition-all duration-300" style="width: 4.34%;"></div>
+  </div>
+
+  <!-- SLIDES MAIN CONTAINER -->
+  <main class="slide-container flex-1 bg-slate-950 p-4 md:p-6 lg:p-8 flex justify-center items-stretch">
+    <div class="w-full max-w-7xl mx-auto">
+
+      <!-- ============================================================== -->
+      <!-- SLIDE 1: TRANG MỞ ĐẦU - GIỚI THIỆU ĐỀ TÀI -->
+      <!-- ============================================================== -->
+      <section id="cover-slide" class="slide active">
+        <div class="glass-card rounded-2xl overflow-hidden shadow-2xl border border-slate-300 min-h-[calc(100vh-12rem)]">
+          <div class="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-12rem)]">
+            <div class="relative min-h-[360px] lg:min-h-full h-full">
+              <div class="absolute inset-0 bg-cover bg-center" style="background-image: linear-gradient(135deg, rgba(10,24,58,0.45), rgba(8,18,42,0.78)), url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80');"></div>
+              <div class="absolute inset-0" style="background: radial-gradient(circle at 50% 50%, rgba(59,130,246,0.7), transparent 30%), linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.32));"></div>
+              <div class="absolute inset-0 flex items-center justify-center p-6">
+                <div class="w-full h-full rounded-[2rem] border border-white/20 bg-white/5 backdrop-blur-[1px] shadow-2xl" style="background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));"></div>
+              </div>
+            </div>
+
+            <div class="flex h-full items-center justify-center bg-[#071a43] px-8 py-10 lg:px-12 text-white">
+              <div class="max-w-xl">
+
+                <h1 class="text-2xl md:text-3xl lg:text-[2.4rem] font-black leading-[1.08] tracking-tight text-white">
+                  <span class="text-white">LEnglish</span> – Học từ vựng,<br>
+                  luyện viết với phản hồi từ AI
+                </h1>
+
+                <p class="mt-6 text-base md:text-lg text-blue-100/90 leading-relaxed">
+                  Ứng dụng mobile hỗ trợ học tiếng Anh thông minh
+                </p>
+
+                <p class="mt-3 text-base text-slate-300">
+                  Nhóm 11 — 6SCNTT
+                </p>
+
+                <div class="mt-8 flex flex-wrap gap-3 text-base font-semibold text-blue-50">
+                  <button onclick="goToSlide(2)" class="px-4 py-2 rounded-full border border-blue-300/30 bg-blue-400/10 hover:bg-blue-500/20 transition text-left">
+                    Phần 1: Giới thiệu đề tài
+                  </button>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-3 text-base font-semibold text-blue-50">
+                  <button onclick="goToSlide(5)" class="px-4 py-2 rounded-full border border-blue-300/30 bg-blue-400/10 hover:bg-blue-500/20 transition text-left">
+                    Phần 2: Phân tích &amp; thiết kế
+                  </button>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-3 text-base font-semibold text-blue-50">
+                  <button onclick="goToSlide(28)" class="px-4 py-2 rounded-full border border-blue-300/30 bg-blue-400/10 hover:bg-blue-500/20 transition text-left">
+                    Phần 3: Công nghệ sử dụng
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SLIDE 2: PHẦN 1: GIỚI THIỆU ĐỀ TÀI -->
+      <!-- ============================================================== -->
+      <section id="slide-intro" class="slide">
+        <div class="glass-card rounded-2xl p-8 lg:p-12 shadow-2xl bg-white border border-slate-200 min-h-[calc(100vh-12rem)] flex items-center justify-center">
+          <h1 class="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight text-center">
+            Phần 1: Giới thiệu đề tài
+          </h1>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SLIDE 3: VẤN ĐỀ VÀ Ý TƯỞNG GIẢI QUYẾT -->
+      <!-- ============================================================== -->
+      <section id="slide-problem" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <!-- Slide Header -->
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold badge-warning">BỐI CẢNH &amp; Ý TƯỞNG ĐỀ TÀI</span>
+                <span class="text-xs text-slate-500 font-mono">Đường Cong Quên Lãng &bull; Phản Hồi Ngôn Ngữ &bull; Giải Pháp LEnglish</span>
+              </div>
+              <h2 class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Vấn Đề Thực Tiễn &amp; Ý Tưởng Giải Quyết</h2>
+              <p class="text-sm text-slate-700 font-medium mt-0.5">Phân tích thực trạng trở ngại của người học tiếng Anh và định hình giải pháp công nghệ toàn diện.</p>
+            </div>
+            <span class="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 font-mono text-xs font-bold border border-amber-200 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Problem &bull; Solution
+            </span>
+          </div>
+
+          <!-- Main Grid: 2 Columns Direct Comparison -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-slate-800">
+            <!-- Left Column: 3 Vấn đề thực tiễn -->
+            <div class="p-6 rounded-2xl border-2 border-rose-200 bg-rose-50/80 shadow-sm flex flex-col justify-between space-y-4">
+              <div>
+                <h3 class="text-base font-black text-rose-950 mb-3.5 flex items-center gap-2">
+                  <span class="text-lg">🛑</span>Rào Cản Thực Tiễn
+                </h3>
+
+                <div class="space-y-3">
+                  <!-- Problem 1 -->
+                  <div class="p-4 bg-white rounded-xl border border-rose-200/90 shadow-sm">
+                    <div class="font-bold text-rose-900 text-sm md:text-base flex items-center gap-2 mb-1.5">
+                      <span>📉</span> 1. Học Nhanh Quên (Đường Cong Ebbinghaus)
+                    </div>
+                    <p class="text-sm text-slate-800 leading-relaxed">
+                      Não bộ quên đến <strong class="text-rose-950 font-bold bg-rose-100/70 px-1 py-0.5 rounded">70% từ mới sau 24 giờ</strong>; việc ôn tập thường ngẫu hứng, thụ động và thiếu lộ trình khoa học.
+                    </p>
+                  </div>
+
+                  <!-- Problem 2 -->
+                  <div class="p-4 bg-white rounded-xl border border-rose-200/90 shadow-sm">
+                    <div class="font-bold text-rose-900 text-sm md:text-base flex items-center gap-2 mb-1.5">
+                      <span>✍️</span> 2. Khó Tự Đánh Giá Khi Luyện Viết
+                    </div>
+                    <p class="text-sm text-slate-800 leading-relaxed">
+                      Viết câu/đoạn văn nhưng <strong class="text-rose-950 font-bold bg-rose-100/70 px-1 py-0.5 rounded">không biết mình sai ở đâu</strong>; chi phí và thời gian nhờ người sửa bài cao &rarr; sinh tâm lý ngại viết.
+                    </p>
+                  </div>
+
+                  <!-- Problem 3 -->
+                  <div class="p-4 bg-white rounded-xl border border-rose-200/90 shadow-sm">
+                    <div class="font-bold text-rose-900 text-sm md:text-base flex items-center gap-2 mb-1.5">
+                      <span>📱</span> 3. Công Cụ Rời Rạc &amp; Mất Động Lực
+                    </div>
+                    <p class="text-sm text-slate-800 leading-relaxed">
+                      Dùng từ điển, sổ tay và app ghi chú phân mảnh; <strong class="text-rose-950 font-bold bg-rose-100/70 px-1 py-0.5 rounded">thiếu cơ chế nhắc nhở chủ động</strong> dẫn đến việc dễ bỏ cuộc giữa chừng.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-rose-100/90 border border-rose-300 text-xs font-bold text-rose-950 flex items-center gap-2">
+                <span>⚠️</span>
+                <span><strong>Hậu quả:</strong> Tốn nhiều thời gian nhưng vốn từ hạn chế, kỹ năng viết không tiến bộ.</span>
+              </div>
+            </div>
+
+            <!-- Right Column: 3 Giải pháp LEnglish -->
+            <div class="p-6 rounded-2xl border-2 border-emerald-200 bg-emerald-50/80 shadow-sm flex flex-col justify-between space-y-4">
+              <div>
+                <h3 class="text-base font-black text-emerald-950 mb-3.5 flex items-center gap-2">
+                  <span class="text-lg">💡</span>Giải Pháp Của LEnglish
+                </h3>
+
+                <div class="space-y-3">
+                  <!-- Solution 1 -->
+                  <div class="p-4 bg-white rounded-xl border border-emerald-200/90 shadow-sm">
+                    <div class="font-bold text-emerald-900 text-sm md:text-base flex items-center gap-2 mb-1.5">
+                      <span>📈</span> 1. Thuật Toán Lặp Ngắt Quãng (SRS)
+                    </div>
+                    <p class="text-sm text-slate-800 leading-relaxed">
+                      Tự động giãn cách ôn tập: <strong class="text-emerald-950 font-bold bg-emerald-100/70 px-1 py-0.5 rounded">1, 2, 4, 7, 14, 30... ngày</strong>; gửi thông báo đúng &ldquo;thời điểm vàng&rdquo; để nhớ vĩnh viễn.
+                    </p>
+                  </div>
+
+                  <!-- Solution 2 -->
+                  <div class="p-4 bg-white rounded-xl border border-emerald-200/90 shadow-sm">
+                    <div class="font-bold text-emerald-900 text-sm md:text-base flex items-center gap-2 mb-1.5">
+                      <span>🤖</span> 2. Chấm &amp; Sửa Bài Tự Động Với AI
+                    </div>
+                    <p class="text-sm text-slate-800 leading-relaxed">
+                      Chấm điểm tức thì (thang 0&ndash;10), sửa câu chuẩn ngữ pháp và <strong class="text-emerald-950 font-bold bg-emerald-100/70 px-1 py-0.5 rounded">giải thích chi tiết bằng tiếng Việt</strong>.
+                    </p>
+                  </div>
+
+                  <!-- Solution 3 -->
+                  <div class="p-4 bg-white rounded-xl border border-emerald-200/90 shadow-sm">
+                    <div class="font-bold text-emerald-900 text-sm md:text-base flex items-center gap-2 mb-1.5">
+                      <span>⚡</span> 3. Học Tập Di Động Tiện Lợi (Micro-learning)
+                    </div>
+                    <p class="text-sm text-slate-800 leading-relaxed">
+                      Ghim Widget ra Home Screen, <strong class="text-emerald-950 font-bold bg-emerald-100/70 px-1 py-0.5 rounded">bôi đen từ ngoài để lưu ngay</strong>, quét chữ OCR sách &rarr; học mọi lúc mọi nơi.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-emerald-100/90 border border-emerald-300 text-xs font-bold text-emerald-950 flex items-center gap-2">
+                <span>🎯</span>
+                <span><strong>Mục tiêu:</strong> Biến việc học thành phản xạ hàng ngày, ghi nhớ sâu và tự tin viết tiếng Anh.</span>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SLIDE 4: TẠI SAO LÀ MOBILE APP? & LEnglish LÀ GÌ? -->
+      <!-- ============================================================== -->
+      <section id="slide-mobile-app" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <!-- Header -->
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold badge-primary">TỔNG QUAN &bull; NỀN TẢNG</span>
+                <span class="text-xs text-slate-500 font-mono">Mobile Platform &bull; Smart Learning &bull; AI Assistant</span>
+              </div>
+              <h2 class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Tại Sao Là Mobile App? &amp; LEnglish Là Gì?</h2>
+              <p class="text-sm text-slate-700 font-medium mt-0.5">Lý do lựa chọn nền tảng di động và định vị giá trị giải pháp hỗ trợ học tiếng Anh thông minh.</p>
+            </div>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-mono text-xs font-bold border border-blue-200 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span> Mobile First &bull; Smart Study
+            </span>
+          </div>
+
+          <!-- Main Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center text-sm text-slate-800">
+            <!-- Left Col: 2 Content Cards (7 cols) -->
+            <div class="lg:col-span-7 space-y-4">
+              <!-- Card 1: Tại sao Mobile App -->
+              <div class="p-5 rounded-2xl border-2 border-sky-200 bg-sky-50/80 shadow-sm">
+                <h3 class="text-sm md:text-base font-black text-sky-950 mb-3 flex items-center gap-2">
+                  <span class="text-lg">📱</span> Tại Sao Lựa Chọn Nền Tảng Mobile App?
+                </h3>
+                <ul class="space-y-2.5 leading-relaxed">
+                  <li class="flex items-start gap-2.5">
+                    <span class="mt-1.5 h-2 w-2 rounded-full bg-sky-600 shrink-0"></span>
+                    <span><strong class="text-slate-950 font-bold bg-sky-100/80 px-1 py-0.5 rounded">Luôn bên người dùng:</strong> Điện thoại là vật bất ly thân, dễ dàng tiếp cận mọi lúc mọi nơi.</span>
+                  </li>
+                  <li class="flex items-start gap-2.5">
+                    <span class="mt-1.5 h-2 w-2 rounded-full bg-sky-600 shrink-0"></span>
+                    <span><strong class="text-slate-950 font-bold bg-sky-100/80 px-1 py-0.5 rounded">Học tập vi mô (Micro-learning):</strong> Tận dụng 5&ndash;10 phút rảnh rỗi trên xe bus, giờ giải lao để ôn tập.</span>
+                  </li>
+                  <li class="flex items-start gap-2.5">
+                    <span class="mt-1.5 h-2 w-2 rounded-full bg-sky-600 shrink-0"></span>
+                    <span><strong class="text-slate-950 font-bold bg-sky-100/80 px-1 py-0.5 rounded">Thông báo nhắc học (Push Notification):</strong> Đánh thức thói quen học tập đúng chu kỳ sinh học.</span>
+                  </li>
+                  <li class="flex items-start gap-2.5">
+                    <span class="mt-1.5 h-2 w-2 rounded-full bg-sky-600 shrink-0"></span>
+                    <span><strong class="text-slate-950 font-bold bg-sky-100/80 px-1 py-0.5 rounded">Tích hợp sâu OS:</strong> Tiện ích Widget màn hình chính, bôi đen từ ngoài và quét camera OCR.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Card 2: LEnglish là gì -->
+              <div class="p-5 rounded-2xl border-2 border-indigo-200 bg-indigo-50/80 shadow-sm">
+                <h3 class="text-sm md:text-base font-black text-indigo-950 mb-3 flex items-center gap-2">
+                  <span class="text-lg">💡</span> LEnglish Là Gì?
+                </h3>
+                <ul class="space-y-2.5 leading-relaxed">
+                  <li class="flex items-start gap-2.5">
+                    <span class="mt-1.5 h-2 w-2 rounded-full bg-indigo-600 shrink-0"></span>
+                    <span><strong class="text-slate-950 font-bold bg-indigo-100/80 px-1 py-0.5 rounded">Ứng dụng học tiếng Anh thông minh:</strong> Kết hợp quản lý sổ từ cá nhân và luyện viết câu văn.</span>
+                  </li>
+                  <li class="flex items-start gap-2.5">
+                    <span class="mt-1.5 h-2 w-2 rounded-full bg-indigo-600 shrink-0"></span>
+                    <span><strong class="text-slate-950 font-bold bg-indigo-100/80 px-1 py-0.5 rounded">Ôn tập ngắt quãng (SRS):</strong> Tự động tính toán ngày ôn tập giãn cách để chống quên lãng.</span>
+                  </li>
+                  <li class="flex items-start gap-2.5">
+                    <span class="mt-1.5 h-2 w-2 rounded-full bg-indigo-600 shrink-0"></span>
+                    <span><strong class="text-slate-950 font-bold bg-indigo-100/80 px-1 py-0.5 rounded">Chấm bài tự động với AI:</strong> Phát hiện lỗi sai ngữ pháp, cho điểm số và giải thích tiếng Việt.</span>
+                  </li>
+                </ul>
+              </div>
+
+            </div>
+
+            <!-- Right Col: Light Mode Phone Mockup (5 cols) -->
+            <div class="lg:col-span-5 flex justify-center items-center py-2">
+              <!-- Phone Frame Light Mode -->
+              <div class="w-[270px] rounded-[2.2rem] border-[6px] border-slate-800 bg-slate-100 p-2 shadow-2xl relative">
+                <!-- Screen -->
+                <div class="w-full rounded-[1.7rem] bg-white overflow-hidden border border-slate-200 flex flex-col h-[430px]">
+                  <!-- Status Bar -->
+                  <div class="px-4 py-1.5 flex items-center justify-between text-[10px] font-bold text-slate-900 bg-white border-b border-slate-100">
+                    <span>9:41</span>
+                    <div class="h-3 w-14 bg-slate-800 rounded-full mx-auto"></div>
+                    <span>5G &bull; 100%</span>
+                  </div>
+
+                  <!-- App Header -->
+                  <div class="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
+                    <div>
+                      <div class="text-[10px] text-blue-100 font-semibold">Xin chào, Nguyễn Văn A</div>
+                      <div class="text-xs font-black">Hôm nay có 12 từ ôn tập</div>
+                    </div>
+                    <div class="w-7 h-7 rounded-full bg-white/25 flex items-center justify-center text-xs font-black">
+                      L
+                    </div>
+                  </div>
+
+                  <!-- Mockup Body Content -->
+                  <div class="p-3 space-y-2.5 flex-1 overflow-hidden bg-slate-50">
+                    <!-- Flashcard Mock -->
+                    <div class="p-3 bg-white rounded-xl border border-blue-200 shadow-sm space-y-1">
+                      <div class="flex items-center justify-between">
+                        <span class="text-[9px] font-black uppercase text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">Flashcard</span>
+                        <span class="text-[10px] text-slate-500 font-semibold">Lần ôn #3</span>
+                      </div>
+                      <div class="font-black text-slate-950 text-base">Resilience</div>
+                      <div class="text-xs text-slate-700 font-mono font-bold">/rɪˈzɪliəns/ &bull; noun</div>
+                      <div class="text-xs text-slate-900 font-extrabold pt-0.5">Khả năng phục hồi, kiên cường</div>
+                    </div>
+
+                    <!-- AI Grading Mock -->
+                    <div class="p-3 bg-white rounded-xl border border-emerald-200 shadow-sm space-y-1.5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-[9px] font-black uppercase text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">Chấm Bài AI</span>
+                        <span class="text-[11px] font-black text-emerald-700">8.5 / 10 ⭐</span>
+                      </div>
+                      <div class="text-xs text-slate-800 font-medium truncate">&ldquo;She is very resilience person...&rdquo;</div>
+                      <div class="text-[11px] text-rose-900 bg-rose-100 border border-rose-200 p-1.5 rounded-lg font-bold">
+                        &rarr; Sửa: &ldquo;resilient&rdquo; (dùng tính từ sau be)
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Mockup Bottom Bar -->
+                  <div class="h-10 bg-white border-t border-slate-200 grid grid-cols-4 items-center text-center text-[10px] text-slate-600 font-bold">
+                    <div class="text-blue-700 font-black">Trang chủ</div>
+                    <div>Sổ từ</div>
+                    <div>Luyện viết</div>
+                    <div>Cá nhân</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SLIDE 5: PHẦN 2: PHÂN TÍCH VÀ THIẾT KẾ -->
+      <!-- ============================================================== -->
+      <section id="slide-part-2" class="slide">
+        <div class="glass-card rounded-2xl p-8 lg:p-12 shadow-2xl bg-white border border-slate-200 min-h-[calc(100vh-12rem)] flex items-center justify-center">
+          <h1 class="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight text-center">
+            Phần 2: Phân tích &amp; Thiết kế
+          </h1>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SLIDE 2: TRANG ĐẦU — BIỂU ĐỒ QUAN HỆ THỰC THỂ (ERD) -->
+      <!-- ============================================================== -->
+      <section id="slide-1" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <!-- Slide Header -->
+          <div class="border-b border-slate-200 pb-5 mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold badge-primary">CƠ SỞ DỮ LIỆU &bull; ERD</span>
+                <span class="text-xs text-slate-500 font-mono">MySQL  &bull; JPA / Hibernate Entities</span>
+              </div>
+              <h2 class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Biểu Đồ Quan Hệ Thực Thể (ERD)</h2>
+              <p class="text-sm text-slate-600 mt-1">Mô hình dữ liệu quan hệ hoàn chỉnh của hệ thống LEnglish (8 bảng, chuẩn hóa 1NF, khóa ngoại &amp; ràng buộc toàn vẹn).</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="openZoom('./LEnglish_ERD.svg', 'Biểu đồ quan hệ thực thể (ERD)')" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"/></svg>
+                <span>Phóng to biểu đồ</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Content Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <!-- Left: Vector Diagram Viewer -->
+            <div class="lg:col-span-7 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center relative group min-h-[460px]">
+              <div class="absolute top-3 left-3 text-[11px] font-mono font-semibold text-slate-500 bg-white/90 px-2.5 py-1 rounded shadow-sm border border-slate-200">
+                Ký hiệu Crow's Foot: || (1 bắt buộc) &bull; o{ (0..n)
+              </div>
+              <img src="./LEnglish_ERD.svg" alt="Sơ đồ ERD LEnglish" class="diagram-img rounded-lg shadow-sm" onclick="openZoom(this.src, 'Sơ đồ ERD LEnglish')">
+              <span class="text-xs text-slate-400 mt-2 italic group-hover:text-blue-600 transition">Nhấp chuột vào ảnh để xem chi tiết độ phân giải cao</span>
+            </div>
+
+            <!-- Right: Architectural Breakdown -->
+            <div class="lg:col-span-5 space-y-4">
+              <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                Cấu Trúc 8 Bảng &amp; Nguyên Lý Thiết Kế
+              </h3>
+
+              <div class="space-y-3 text-xs text-slate-700">
+                <!-- User & Auth -->
+                <div class="p-3 bg-slate-50 rounded-lg border border-slate-200/80">
+                  <div class="font-bold text-slate-900 flex justify-between">
+                    <span>1. users &amp; refresh_tokens</span>
+                    <span class="text-[11px] font-mono text-blue-600">1 &mdash; 0..*</span>
+                  </div>
+                  <p class="text-slate-600 mt-1">Lưu tài khoản, mật khẩu băm <strong>BCrypt (60 ký tự)</strong>. Bảng <code>refresh_tokens</code> lưu phiên làm việc, xóa khi hết hạn hoặc logout (Refresh Token Rotation).</p>
+                </div>
+
+                <!-- Words & Word Values -->
+                <div class="p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                  <div class="font-bold text-slate-900 flex justify-between">
+                    <span>2. words &amp; word_values</span>
+                    <span class="text-[11px] font-mono text-blue-600">1 &mdash; 0..* (Cascade)</span>
+                  </div>
+                  <p class="text-slate-600 mt-1">Sổ từ của user: UNIQUE <code>(user_id, english)</code>. Tách thuộc tính đa trị <strong>1NF</strong> sang <code>word_values</code> (5 cột riêng: nghĩa, ví dụ, dịch, phiên âm IPA, từ loại). Cột SRS: <code>review_count</code>, <code>next_review</code>.</p>
+                </div>
+
+                <!-- Word Cache -->
+                <div class="p-3 bg-purple-50/50 rounded-lg border border-purple-100">
+                  <div class="font-bold text-slate-900 flex justify-between">
+                    <span>3. word_cache &amp; word_cache_values</span>
+                    <span class="text-[11px] font-mono text-purple-700">Bộ nhớ đệm dùng chung</span>
+                  </div>
+                  <p class="text-slate-600 mt-1"><strong>KHÔNG có cột <code>user_id</code></strong> &mdash; kho từ điển chung toàn hệ thống. Sinh bởi AI (Cache-first); khi user khác tra/thêm cùng từ sẽ lấy trực tiếp từ cache, tiết kiệm chi phí gọi LLM.</p>
+                </div>
+
+                <!-- Phrases & Grammar -->
+                <div class="p-3 bg-amber-50/50 rounded-lg border border-amber-100">
+                  <div class="font-bold text-slate-900 flex justify-between">
+                    <span>4. phrases &amp; grammar_errors</span>
+                    <span class="text-[11px] font-mono text-amber-700">Composition (Cascade)</span>
+                  </div>
+                  <p class="text-slate-600 mt-1">Lưu câu gốc, câu đã sửa và điểm số <code>score (CHECK 0..10)</code> do AI chấm. Bảng con <code>grammar_errors</code> lưu chi tiết lỗi sai, cách sửa và giải thích tiếng Việt.</p>
+                </div>
+              </div>
+
+              <!-- Key Rules Box -->
+              <div class="p-3 bg-emerald-50 text-emerald-900 rounded-lg border border-emerald-200 text-xs">
+                <strong>Quy tắc toàn vẹn:</strong> Khóa ngoại <code>ON DELETE CASCADE</code> trên tất cả các quan hệ 1-N cấu thành (Words &rarr; WordValues, Phrases &rarr; GrammarErrors, Users &rarr; Tokens/Words/Phrases), đảm bảo triệt tiêu dữ liệu rác.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SLIDE 2: TRANG SAU — TỔNG HỢP CÁC CHỨC NĂNG HỆ THỐNG -->
+      <!-- ============================================================== -->
+      <section id="slide-2" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-5 mb-6">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold badge-purple">TỔNG QUAN HỆ THỐNG</span>
+              <span class="text-xs text-slate-500 font-mono">20 Chức Năng Phân Rã &bull; 5 Trụ Cột Nghiệp Vụ</span>
+            </div>
+            <h2 class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Tổng Hợp Ma Trận Chức Năng Hệ Thống</h2>
+            <p class="text-sm text-slate-600 mt-1">Danh mục các chức năng người dùng, dịch vụ nền tảng AI, tác vụ hệ thống tự động và tích hợp hệ điều hành Android.</p>
+          </div>
+
+          <!-- Feature Categories Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <!-- Col 1: Account -->
+            <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/70 hover:shadow-md transition">
+              <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
+                <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <span class="text-base">🔐</span> Quản Lý Tài Khoản &amp; Phiên
+                </h3>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">5 tác vụ</span>
+              </div>
+              <ul class="space-y-2 text-xs">
+                <li class="flex items-center justify-between cursor-pointer hover:text-blue-600" onclick="goToSlide(8)">
+                  <span><strong>ACT-01:</strong> Tạo tài khoản (Đăng ký)</span>
+                  
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-blue-600" onclick="goToSlide(9)">
+                  <span><strong>ACT-02:</strong> Đăng nhập hệ thống</span>
+                  
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-blue-600" onclick="goToSlide(10)">
+                  <span><strong>ACT-03:</strong> Đăng xuất tài khoản</span>
+                  
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-blue-600" onclick="goToSlide(11)">
+                  <span><strong>ACT-04:</strong> Làm mới token (Auto-Rotation)</span>
+                  
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-blue-600" onclick="goToSlide(25)">
+                  <span><strong>ACT-18:</strong> Dọn refresh token quá hạn</span>
+                  
+                </li>
+              </ul>
+            </div>
+
+            <!-- Col 2: Vocabulary & SRS -->
+            <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/70 hover:shadow-md transition">
+              <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
+                <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <span class="text-base">📚</span> Quản Lý Từ &amp; Ôn Tập SRS
+                </h3>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">6 chức năng</span>
+              </div>
+              <ul class="space-y-2 text-xs">
+                <li class="flex items-center justify-between cursor-pointer hover:text-emerald-700" onclick="goToSlide(12)">
+                  <span><strong>ACT-05:</strong> Xem danh sách từ vựng</span>
+                  
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-emerald-700" onclick="goToSlide(13)">
+                  <span><strong>ACT-06:</strong> Thêm từ vựng mới</span>
+                  
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-emerald-700" onclick="goToSlide(14)">
+                  <span><strong>ACT-07:</strong> Sửa thông tin &amp; nghĩa từ</span>
+                  
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-emerald-700" onclick="goToSlide(15)">
+                  <span><strong>ACT-08:</strong> Xóa từ vựng khỏi sổ</span>
+                  
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-emerald-700" onclick="goToSlide(26)">
+                  <span><strong>ACT-19:</strong> Xác nhận ôn tập &amp; Tính SRS</span>
+                 
+                </li>
+                <li class="flex items-center justify-between text-slate-500">
+                  <span>&bull; Tab Ôn tập (Client-side filter)</span>
+             
+                </li>
+              </ul>
+            </div>
+
+            <!-- Col 3: Phrases & Grading -->
+            <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/70 hover:shadow-md transition">
+              <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
+                <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <span class="text-base">✍️</span> Quản Lý Đoạn Văn &amp; Chấm
+                </h3>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">3 chức năng</span>
+              </div>
+              <ul class="space-y-2 text-xs">
+                <li class="flex items-center justify-between cursor-pointer hover:text-amber-700" onclick="goToSlide(17)">
+                  <span><strong>ACT-10:</strong> Xem danh sách đoạn văn</span>
+                
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-amber-700" onclick="goToSlide(18)">
+                  <span><strong>ACT-11:</strong> Thêm đoạn văn (Gọi AI chấm)</span>
+               
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-amber-700" onclick="goToSlide(20)">
+                  <span><strong>ACT-13:</strong> Xóa đoạn văn đã lưu</span>
+              
+                </li>
+              </ul>
+            </div>
+
+            <!-- Col 4: AI Engine -->
+            <div class="border border-slate-200 rounded-xl p-4 bg-purple-50/50 hover:shadow-md transition">
+              <div class="flex items-center justify-between pb-2 mb-3 border-b border-purple-200">
+                <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <span class="text-base">🤖</span> Trí Tuệ Nhân Tạo (AI Engine)
+                </h3>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800">3 tính năng</span>
+              </div>
+              <ul class="space-y-2 text-xs">
+                <li class="flex items-center justify-between cursor-pointer hover:text-purple-700" onclick="goToSlide(16)">
+                  <span><strong>ACT-09:</strong> Sinh nghĩa từ (Cache-First)</span>
+           
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-purple-700" onclick="goToSlide(19)">
+                  <span><strong>ACT-12:</strong> Chấm đoạn văn (Hàm nội bộ)</span>
+   
+                </li>
+                <li class="flex items-center justify-between cursor-pointer hover:text-purple-700" onclick="goToSlide(27)">
+                  <span><strong>ACT-20:</strong> Thêm 10 từ theo chủ đề</span>
+      
+                </li>
+              </ul>
+            </div>
+
+            <!-- Col 5: Android Integration -->
+            <div class="border border-slate-200 rounded-xl p-4 bg-cyan-50/50 hover:shadow-md transition md:col-span-2">
+              <div class="flex items-center justify-between pb-2 mb-3 border-b border-cyan-200">
+                <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <span class="text-base">📱</span> Nền Tảng Thiết Bị Android
+                </h3>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-cyan-100 text-cyan-800">4 tính năng OS</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div class="cursor-pointer hover:text-cyan-800 p-2 bg-white rounded border border-cyan-100" onclick="goToSlide(21)">
+                  <span class="font-bold">ACT-14: Thông báo ôn tập</span>
+                  <p class="text-[11px] text-slate-500 mt-0.5">WorkManager kiểm tra dueCount ngầm &bull; Push Notification khi có từ đến hạn.</p>
+                </div>
+                <div class="cursor-pointer hover:text-cyan-800 p-2 bg-white rounded border border-cyan-100" onclick="goToSlide(22)">
+                  <span class="font-bold">ACT-15: Widget màn hình chính</span>
+                  <p class="text-[11px] text-slate-500 mt-0.5">AppWidgetProvider cập nhật từ cần ôn &bull; 1-click mở app học ngay.</p>
+                </div>
+                <div class="cursor-pointer hover:text-cyan-800 p-2 bg-white rounded border border-cyan-100" onclick="goToSlide(23)">
+                  <span class="font-bold">ACT-16: Thêm từ bôi đen</span>
+                  <p class="text-[11px] text-slate-500 mt-0.5">Intent ACTION_PROCESS_TEXT khi đọc báo/app khác &bull; Bật form thêm tức thì.</p>
+                </div>
+                <div class="cursor-pointer hover:text-cyan-800 p-2 bg-white rounded border border-cyan-100" onclick="goToSlide(24)">
+                  <span class="font-bold">ACT-17: Quét OCR lấy văn bản</span>
+                  <p class="text-[11px] text-slate-500 mt-0.5">Google ML Kit Text Recognition chạy on-device &bull; Điền văn bản vào ô Chấm bài.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- TEMPLATE HELPER FUNCTION: SLIDES 3 TO 22 -->
+      <!-- SLIDE 3: ACT-01 - ĐĂNG KÝ -->
+      <section id="slide-3" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-primary px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-01</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Tài Khoản &bull; Actor: Người Dùng</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Tạo Tài Khoản (Đăng Ký)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-01-dang-ky.svg', 'ACT-01: Tạo tài khoản')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-01-dang-ky.svg" alt="ACT-01" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-01: Tạo tài khoản')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100">
+                <h4 class="font-bold text-blue-900 mb-1 text-sm">🎯 Mục tiêu &amp; Điểm đầu cuối API</h4>
+                <p>Khởi tạo tài khoản mới vào hệ thống. Endpoint: <code>POST /api/auth/register</code> (Body: <code>username, password</code>).</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động (Step-by-Step)</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Gửi thông tin:</strong> Người dùng nhập tên đăng nhập và mật khẩu tại form giao diện.</li>
+                  <li><strong>Validation đầu vào:</strong> Hệ thống kiểm tra hợp lệ (không rỗng, độ dài tối thiểu, ký tự hợp lệ). Nếu sai &rarr; trả ngay <span class="badge-danger px-1.5 py-0.5 rounded font-bold">400 Bad Request</span> ("Thông tin không hợp lệ").</li>
+                  <li><strong>Kiểm tra trùng lặp:</strong> Truy vấn bảng <code>users</code> theo <code>username</code>. Nếu tên đăng nhập đã tồn tại &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">409 Conflict</span> ("Tên đăng nhập đã tồn tại"). Bước này chặn trước ngoại lệ vi phạm Unique constraint của CSDL.</li>
+                  <li><strong>Mã hóa mật khẩu:</strong> Sử dụng thuật toán <strong>BCrypt</strong> sinh chuỗi băm 60 ký tự bảo mật (với Salt ngẫu nhiên). Tuyệt đối không lưu mật khẩu thô.</li>
+                  <li><strong>Lưu CSDL &amp; Phản hồi:</strong> Thêm bản ghi vào bảng <code>users</code> và trả về kết quả <span class="badge-success px-1.5 py-0.5 rounded font-bold">200/201 Thành công</span>.</li>
+                </ol>
+              </div>
+
+              <div class="p-3 bg-slate-100 rounded-lg border border-slate-200">
+                <span class="font-bold text-slate-900">🛡️ An Toàn Kỹ Thuật:</span> Chống tấn công Enumeration bằng cách validate phía server và trả mã 409 chuẩn RFC thay vì lỗi máy chủ 500.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 4: ACT-02 - ĐĂNG NHẬP -->
+      <section id="slide-4" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-primary px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-02</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Tài Khoản &bull; Actor: Người Dùng</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Đăng Nhập (Authentication)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-02-dang-nhap.svg', 'ACT-02: Đăng nhập')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-02-dang-nhap.svg" alt="ACT-02" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-02: Đăng nhập')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100">
+                <h4 class="font-bold text-blue-900 mb-1 text-sm">🎯 Mục tiêu &amp; Cấp phát Token</h4>
+                <p>Xác thực danh tính người dùng và cấp phát cặp <strong>Access Token (JWT ngắn hạn) + Refresh Token (UUID dài hạn)</strong>. Endpoint: <code>POST /api/auth/login</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Nhận thông tin &amp; Validate:</strong> Tiếp nhận username và password. Nếu định dạng sai &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">401 Unauthorized</span>.</li>
+                  <li><strong>Tra cứu CSDL:</strong> Tìm bản ghi User trong bảng <code>users</code> theo tên đăng nhập.</li>
+                  <li><strong>So khớp mật khẩu:</strong> Kiểm tra mật khẩu gửi lên với mã băm trong DB thông qua <code>passwordEncoder.matches()</code>. Nếu không tìm thấy User hoặc mật khẩu không khớp &rarr; đồng loạt trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">401 Unauthorized</span> ("Đăng nhập thất bại") để chống rò rỉ thông tin tài khoản.</li>
+                  <li><strong>Sinh Token kép:</strong>
+                    <ul class="list-disc list-inside pl-4 mt-1 space-y-1 text-slate-600">
+                      <li><code>AccessToken</code>: Chuỗi JWT có thời hạn ngắn (15-60 phút), chứa user claims và chữ ký số.</li>
+                      <li><code>RefreshToken</code>: Chuỗi ngẫu nhiên dài hạn kèm thời điểm hết hạn <code>expiry_date</code>.</li>
+                    </ul>
+                  </li>
+                  <li><strong>Lưu DB &amp; Phản hồi:</strong> Lưu refresh token vào bảng <code>refresh_tokens</code>, trả cặp token về cho Client lưu vào bộ nhớ an toàn (EncryptedSharedPreferences).</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 5: ACT-03 - ĐĂNG XUẤT -->
+      <section id="slide-5" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-primary px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-03</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Tài Khoản &bull; Actor: Người Dùng</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Đăng Xuất (Logout &amp; Token Revocation)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-03-dang-xuat.svg', 'ACT-03: Đăng xuất')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-03-dang-xuat.svg" alt="ACT-03" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-03: Đăng xuất')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100">
+                <h4 class="font-bold text-blue-900 mb-1 text-sm">🎯 Hủy phiên làm việc &amp; Thu hồi Token</h4>
+                <p>Hủy bỏ Refresh Token trong CSDL để ngăn Client tự động làm mới phiên làm việc. Endpoint: <code>POST /api/auth/logout</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Gửi yêu cầu đăng xuất:</strong> Client gửi request kèm refresh token và Bearer access token lên server.</li>
+                  <li><strong>Thu hồi trong CSDL:</strong> Server tìm và xóa bản ghi trong bảng <code>refresh_tokens</code> tương ứng với token gửi lên.</li>
+                  <li><strong>Xóa cục bộ phía Client:</strong> Client dọn sạch bộ nhớ cache, access token và refresh token khỏi thiết bị.</li>
+                  <li><strong>Phản hồi thành công:</strong> Server trả về mã <span class="badge-success px-1.5 py-0.5 rounded font-bold">200 OK</span> ("Đăng xuất thành công").</li>
+                </ol>
+              </div>
+
+              <div class="p-3 bg-amber-50 rounded-lg border border-amber-200 text-amber-900 leading-relaxed">
+                <strong>📌 Lưu ý kiến trúc JWT Stateless:</strong> Access Token (JWT) mang tính phi trạng thái và không bị thu hồi ngay lập tức; nó sẽ tự mất hiệu lực sau khi hết vòng đời ngắn ngủi (15-30 phút). Việc xóa refresh token chặn đứng khả năng duy trì phiên vĩnh viễn.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 6: ACT-04 - LÀM MỚI TOKEN -->
+      <section id="slide-6" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-primary px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-04</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Tài Khoản &bull; Actor: Hệ Thống Client (Auto)</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Làm Mới Token (Refresh Token Rotation)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-04-lam-moi-token.svg', 'ACT-04: Làm mới token')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-04-lam-moi-token.svg" alt="ACT-04" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-04: Làm mới token')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100">
+                <h4 class="font-bold text-blue-900 mb-1 text-sm">🎯 Tiêu Chuẩn Bảo Mật Refresh Token Rotation</h4>
+                <p>Cơ chế tự động cấp cặp token mới khi Access Token hết hạn, đồng thời hủy ngay token cũ để chống tái sử dụng trái phép (Replay Attack). Endpoint: <code>POST /api/auth/refresh</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Kích hoạt tự động:</strong> Khi một API nghiệp vụ trả về 401 do Access Token hết hạn, HTTP Interceptor phía client tự động gửi <code>refreshToken</code> lên server.</li>
+                  <li><strong>Tra cứu CSDL:</strong> Server tìm kiếm chuỗi token trong bảng <code>refresh_tokens</code>. Nếu không có &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">401 Unauthorized</span> (buộc đăng nhập lại).</li>
+                  <li><strong>Kiểm tra hạn sử dụng:</strong> Nếu <code>expiry_date &lt; now()</code> &rarr; Xóa token chết khỏi CSDL và trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">401 Phiên hết hạn</span>.</li>
+                  <li><strong>Xoay vòng Token (Rotation):</strong> Nếu còn hạn:
+                    <ul class="list-disc list-inside pl-4 mt-1 space-y-1 text-slate-600">
+                      <li>Xóa bản ghi <code>refreshToken</code> cũ trong DB (dùng một lần).</li>
+                      <li>Khởi tạo một cặp <code>accessToken</code> mới + <code>refreshToken</code> mới.</li>
+                      <li>Lưu <code>refreshToken</code> mới vào CSDL kèm <code>expiry_date</code> mới.</li>
+                    </ul>
+                  </li>
+                  <li><strong>Hoàn tất:</strong> Trả cặp token mới cho Client tiếp tục thực hiện request dở dang một cách trong suốt.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 7: ACT-05 - XEM TỪ -->
+      <section id="slide-7" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-success px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-05</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Từ Vựng &bull; Actor: Người Dùng</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Xem Danh Sách Từ Vựng</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-05-xem-tu.svg', 'ACT-05: Xem từ')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-05-xem-tu.svg" alt="ACT-05" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-05: Xem từ')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100">
+                <h4 class="font-bold text-emerald-900 mb-1 text-sm">🎯 Truy Vấn Cô Lập Theo Người Dùng</h4>
+                <p>Lấy toàn bộ danh sách từ vựng cá nhân cùng tất cả các nghĩa cấu thành. Endpoint: <code>GET /api/words</code> (Header: <code>Authorization: Bearer &lt;JWT&gt;</code>).</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Gửi yêu cầu có xác thực:</strong> Người dùng mở màn hình Sổ từ vựng. Client gửi HTTP GET kèm JWT.</li>
+                  <li><strong>JwtFilter kiểm tra:</strong> Bộ lọc xác thực tính hợp lệ và thời hạn JWT. Nếu lỗi/hết hạn &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">401 Unauthorized</span>.</li>
+                  <li><strong>Trích xuất User ID &amp; Query CSDL:</strong> Lấy <code>userId</code> từ claims của token. Thực hiện câu lệnh truy vấn lọc nghiêm ngặt <code>WHERE user_id = :userId</code>.</li>
+                  <li><strong>Nạp cấu trúc 1-N:</strong> Tự động nạp danh sách <code>word_values</code> tương ứng của từng từ (nghĩa, ví dụ, phiên âm, từ loại).</li>
+                  <li><strong>Hiển thị giao diện:</strong> Trả mã <span class="badge-success px-1.5 py-0.5 rounded font-bold">200 OK</span> cùng danh sách DTO để app hiển thị dạng danh sách / Flashcard.</li>
+                </ol>
+              </div>
+
+              <div class="p-3 bg-slate-100 rounded-lg border border-slate-200">
+                <strong>💡 Lưu ý về Tab Ôn Tập:</strong> Không có API riêng cho tab Ôn tập; app chỉ lọc dữ liệu cục bộ đã tải: <code>nextReview &le; now()</code> để hiển thị các từ đến hạn ôn tập SRS.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 8: ACT-06 - THÊM TỪ -->
+      <section id="slide-8" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-success px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-06</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Từ Vựng &bull; Actor: Người Dùng</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Thêm Từ Vựng Mới (Multi-Values 1-N)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-06-them-tu.svg', 'ACT-06: Thêm từ')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-06-them-tu.svg" alt="ACT-06" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-06: Thêm từ')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100">
+                <h4 class="font-bold text-emerald-900 mb-1 text-sm">🎯 Lưu Trữ Đa Nghĩa Trong Một Transaction</h4>
+                <p>Tạo từ mới gắn với tài khoản cá nhân kèm danh sách nghĩa đa trị. Endpoint: <code>POST /api/words</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Nhập liệu &amp; Gửi request:</strong> Người dùng nhập từ tiếng Anh, level và thêm một hoặc nhiều nghĩa tiếng Việt kèm ví dụ, phiên âm, từ loại.</li>
+                  <li><strong>Kiểm tra JWT:</strong> <code>JwtFilter</code> thẩm định token; trả 401 nếu không hợp lệ.</li>
+                  <li><strong>Kiểm tra trùng từ trong sổ:</strong> Kiểm tra ràng buộc <code>UNIQUE (user_id, english)</code>. Nếu từ đã có trong sổ của người này &rarr; trả ngay <span class="badge-danger px-1.5 py-0.5 rounded font-bold">409 Conflict</span> ("Từ này đã có trong sổ của bạn").</li>
+                  <li><strong>Transaction CSDL (Atomic):</strong>
+                    <ul class="list-disc list-inside pl-4 mt-1 space-y-1 text-slate-600">
+                      <li>Insert bảng <code>words</code> (gắn <code>user_id</code>, <code>review_count = 0</code>, <code>next_review = now()</code>).</li>
+                      <li>Nhận <code>word_id</code> vừa sinh &rarr; Insert hàng loạt vào bảng <code>word_values</code> (mỗi nghĩa = 1 dòng đầy đủ 5 cột).</li>
+                    </ul>
+                  </li>
+                  <li><strong>Phản hồi:</strong> Trả mã <span class="badge-success px-1.5 py-0.5 rounded font-bold">201 Created</span>; giao diện cập nhật từ mới vào danh sách.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 9: ACT-07 - SỬA TỪ -->
+      <section id="slide-9" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-success px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-07</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Từ Vựng &bull; Actor: Người Dùng</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Sửa Từ Vựng (IDOR Guard &amp; Orphan Removal)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-07-sua-tu.svg', 'ACT-07: Sửa từ')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-07-sua-tu.svg" alt="ACT-07" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-07: Sửa từ')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-100">
+                <h4 class="font-bold text-amber-900 mb-1 text-sm">🎯 Bảo Mật Sở Hữu &amp; Đồng Bộ Danh Sách Nghĩa</h4>
+                <p>Cập nhật thông tin từ vựng có cơ chế chống sửa trộm dữ liệu người khác (IDOR). Endpoint: <code>PUT /api/words/{id}</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Gửi yêu cầu chỉnh sửa:</strong> Client gửi thông tin cập nhật kèm <code>word_id</code> và JWT token.</li>
+                  <li><strong>Xác thực &amp; Kiểm tra sở hữu (IDOR Guard):</strong> Thẩm định JWT (401 nếu sai). Kiểm tra xem <code>word.user_id == current_user.id</code>? Nếu người dùng cố tình sửa từ của tài khoản khác &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">403 Forbidden</span> ("Không có quyền sửa từ này").</li>
+                  <li><strong>Kiểm tra trùng lặp từ:</strong> Nếu có thay đổi chuỗi <code>english</code>, kiểm tra xem từ mới có trùng với một từ khác trong sổ không. Nếu trùng &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">409 Conflict</span>.</li>
+                  <li><strong>Đồng bộ danh sách <code>word_values</code>:</strong> Cập nhật dòng cũ theo ID, thêm dòng mới phát sinh, và tự động xóa dòng bị lược bỏ khỏi danh sách nhờ cơ chế <code>orphanRemoval = true</code> trong JPA.</li>
+                  <li><strong>Phản hồi:</strong> Trả mã <span class="badge-success px-1.5 py-0.5 rounded font-bold">200 OK</span> cập nhật thành công.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 10: ACT-08 - XÓA TỪ -->
+      <section id="slide-10" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-success px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-08</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Từ Vựng &bull; Actor: Người Dùng</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Xóa Từ Vựng (Cascade Deletion)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-08-xoa-tu.svg', 'ACT-08: Xóa từ')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-08-xoa-tu.svg" alt="ACT-08" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-08: Xóa từ')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-red-50/60 rounded-xl border border-red-100">
+                <h4 class="font-bold text-red-900 mb-1 text-sm">🎯 Xóa Từ &amp; Tự Động Dọn Toàn Bộ Nghĩa Liên Quan</h4>
+                <p>Xóa bản ghi từ vựng và tự động xóa lan truyền danh sách nghĩa con. Endpoint: <code>DELETE /api/words/{id}</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Người dùng gửi lệnh xóa:</strong> Bấm nút Xóa từ trên giao diện và xác nhận cảnh báo.</li>
+                  <li><strong>Xác thực danh tính:</strong> <code>JwtFilter</code> kiểm tra token; trả 401 nếu lỗi.</li>
+                  <li><strong>Kiểm tra quyền sở hữu (403):</strong> Truy vấn bản ghi từ, so khớp xem <code>word.user_id == current_user.id</code>? Nếu không phải chính chủ &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">403 Forbidden</span> ("Không có quyền xóa từ này").</li>
+                  <li><strong>Thực thi xóa Cascade:</strong> Xóa bản ghi trong bảng <code>words</code>. Ràng buộc <code>ON DELETE CASCADE</code> trong CSDL sẽ tự động xóa sạch toàn bộ các hàng tương ứng trong bảng <code>word_values</code>.</li>
+                  <li><strong>Phản hồi:</strong> Trả mã <span class="badge-success px-1.5 py-0.5 rounded font-bold">200 OK / 204 No Content</span>; UI cập nhật loại bỏ từ khỏi danh sách.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 11: ACT-09 - SINH NGHĨA TỪ (AI) -->
+      <section id="slide-11" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-purple px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-09</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: AI Engine &bull; Actor: Người Dùng &amp; AI</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Sinh Nghĩa Từ (Chiến Lược Cache-First AI)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-09-sinh-nghia-tu.svg', 'ACT-09: Sinh nghĩa từ')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-09-sinh-nghia-tu.svg" alt="ACT-09" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-09: Sinh nghĩa từ')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-purple-50/60 rounded-xl border border-purple-100">
+                <h4 class="font-bold text-purple-900 mb-1 text-sm">🎯 Kiến Trúc Bộ Nhớ Đệm Hai Tầng (Cache-First)</h4>
+                <p>Tự động đề xuất nghĩa, phiên âm, từ loại và ví dụ câu khi người dùng gõ từ tiếng Anh. Sử dụng quan hệ <code>&laquo;extend&raquo;</code> với màn hình Thêm từ.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Kiểm tra Cache Hệ Thống:</strong> Nhận từ tiếng Anh &rarr; Truy vấn bảng <code>word_cache</code>.
+                    <ul class="list-disc list-inside pl-4 mt-1 text-slate-600">
+                      <li><strong>Cache-Hit:</strong> Nếu từ đã có trong cache &rarr; Lấy ngay danh sách nghĩa từ <code>word_cache_values</code> trả về tức thì cho client (độ trễ ~10ms, tiết kiệm 100% quota AI).</li>
+                      <li><strong>Cache-Miss:</strong> Chưa có trong cache &rarr; Tiến hành luồng gọi AI bên dưới.</li>
+                    </ul>
+                  </li>
+                  <li><strong>Validation từ tiếng Anh:</strong> Kiểm tra xem chuỗi có phải từ tiếng Anh hợp lệ không. Nếu chuỗi vô nghĩa &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">400 Bad Request</span> ("Từ gửi lên không phải một từ tiếng Anh").</li>
+                  <li><strong>Gọi AI:</strong> Gửi request sang LLM yêu cầu cấu trúc JSON chuẩn (nghĩa tiếng Việt, phiên âm IPA, từ loại, câu ví dụ, dịch câu ví dụ, level CEFR).</li>
+                  <li><strong>Xử lý ngoại lệ:</strong> Nếu dịch vụ AI lỗi/timeout &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">502 Bad Gateway</span> ("Dịch vụ AI tạm thời không khả dụng").</li>
+                  <li><strong>Lưu Cache &amp; Phản hồi:</strong> Lưu từ vào <code>word_cache</code> và các chi tiết vào <code>word_cache_values</code> để tái sử dụng toàn hệ thống, sau đó trả dữ liệu cho người dùng.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 12: ACT-10 - XEM ĐOẠN VĂN -->
+      <section id="slide-12" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-warning px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-10</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Đoạn Văn &bull; Actor: Người Dùng</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Xem Danh Sách Đoạn Văn</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-10-xem-doan-van.svg', 'ACT-10: Xem đoạn văn')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-10-xem-doan-van.svg" alt="ACT-10" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-10: Xem đoạn văn')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-100">
+                <h4 class="font-bold text-amber-900 mb-1 text-sm">🎯 Lịch Sử Chấm Đoạn Văn Cá Nhân</h4>
+                <p>Hiển thị các câu văn đã gửi chấm kèm điểm số và phân tích ngữ pháp chi tiết. Endpoint: <code>GET /api/phrases</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Người dùng gửi yêu cầu:</strong> Mở màn hình Lịch sử đoạn văn kèm Bearer token.</li>
+                  <li><strong>JwtFilter kiểm tra:</strong> Xác thực tính hợp lệ của token (401 nếu lỗi/hết hạn).</li>
+                  <li><strong>Truy vấn CSDL:</strong> Thực hiện câu lệnh truy vấn lọc theo chính chủ <code>WHERE user_id = :userId</code> trong bảng <code>phrases</code>.</li>
+                  <li><strong>Nạp lỗi ngữ pháp kèm theo:</strong> Tải toàn bộ danh sách <code>grammar_errors</code> của từng câu văn (chứa cụm từ sai, cụm từ đúng và giải thích tiếng Việt).</li>
+                  <li><strong>Hiển thị kết quả:</strong> Trả về mã <span class="badge-success px-1.5 py-0.5 rounded font-bold">200 OK</span>; ứng dụng hiển thị dạng thẻ điểm số trực quan.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 13: ACT-11 - THÊM ĐOẠN VĂN -->
+      <section id="slide-13" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-warning px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-11</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Đoạn Văn &bull; Actor: Người Dùng &amp; AI</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Thêm Đoạn Văn (Gộp Chấm AI &laquo;include&raquo;)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-11-them-doan-van.svg', 'ACT-11: Thêm đoạn văn')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-11-them-doan-van.svg" alt="ACT-11" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-11: Thêm đoạn văn')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-100">
+                <h4 class="font-bold text-amber-900 mb-1 text-sm">🎯 Quy Trình Chấm Trước &mdash; Lưu Sau</h4>
+                <p>Người dùng gửi đoạn văn tiếng Anh &rarr; Hệ thống bắt buộc gọi AI chấm điểm trước, chỉ lưu vào CSDL khi AI chấm thành công. Endpoint: <code>POST /api/phrases</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Gửi đoạn văn:</strong> Người dùng nhập đoạn văn (hoặc quét qua OCR) và bấm nút Chấm bài.</li>
+                  <li><strong>Kiểm tra xác thực:</strong> <code>JwtFilter</code> kiểm tra token (401 nếu lỗi).</li>
+                  <li><strong>Gọi hàm nội bộ Chấm đoạn văn (&laquo;include&raquo; ACT-12):</strong> Chuyển văn bản sang dịch vụ AI để nhận về: <code>score (0..10)</code>, <code>correctedText</code>, và danh sách lỗi (incorrect, correction, explanation).</li>
+                  <li><strong>Xử lý khi AI thất bại:</strong> Nếu đoạn văn không hợp lệ &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">400</span>. Nếu AI quá tải &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">502</span>. <em>Tuyệt đối không lưu bản ghi rác vào DB</em> khi chấm chưa hoàn tất.</li>
+                  <li><strong>Lưu CSDL &amp; Phản hồi:</strong> Mở transaction lưu bảng <code>phrases</code> và nạp danh sách <code>grammar_errors</code>. Trả kết quả <span class="badge-success px-1.5 py-0.5 rounded font-bold">200/201 Thành công</span>.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 14: ACT-12 - CHẤM ĐOẠN VĂN (AI) -->
+      <section id="slide-14" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-purple px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-12</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: AI Engine &bull; Actor: AI (Hàm Nội Bộ)</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Chấm Đoạn Văn (Bộ Phân Tích 5 Chỉ Số Ngữ Pháp)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-12-cham-doan-van.svg', 'ACT-12: Chấm đoạn văn')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-12-cham-doan-van.svg" alt="ACT-12" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-12: Chấm đoạn văn')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-purple-50/60 rounded-xl border border-purple-100">
+                <h4 class="font-bold text-purple-900 mb-1 text-sm">🎯 Hàm Nội Bộ Đánh Giá Chất Lượng Văn Bản</h4>
+                <p>Không được gọi trực tiếp bởi người dùng. Được gọi bởi quy trình Thêm đoạn văn qua quan hệ phụ thuộc <code>&laquo;include&raquo;</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động &amp; Cấu Trúc Trả Về</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Kiểm tra đầu vào:</strong> Đoạn văn không được để trống, phải có độ dài hợp lý và là câu văn tiếng Anh. Nếu vi phạm &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">400 Bad Request</span>.</li>
+                  <li><strong>Gọi AI Engine phân tích sâu:</strong> Gửi request sang AI API yêu cầu trả về đủ <strong>5 thành phần kết quả</strong>:
+                    <div class="grid grid-cols-2 gap-2 mt-2 font-mono text-[11px]">
+                      <div class="p-2 bg-slate-100 rounded">1. <code>score</code>: Điểm số (0..10)</div>
+                      <div class="p-2 bg-slate-100 rounded">2. <code>correctedText</code>: Câu đã sửa</div>
+                      <div class="p-2 bg-slate-100 rounded">3. <code>incorrect</code>: Cụm từ sai</div>
+                      <div class="p-2 bg-slate-100 rounded">4. <code>correction</code>: Cụm từ đúng</div>
+                      <div class="p-2 bg-slate-100 rounded col-span-2">5. <code>explanation</code>: Giải thích cặn kẽ tiếng Việt</div>
+                    </div>
+                  </li>
+                  <li><strong>Xử lý lỗi mạng:</strong> Nếu AI timeout hoặc định dạng sai schema &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">502 Bad Gateway</span>.</li>
+                  <li><strong>Trả về caller:</strong> Đóng gói dữ liệu DTO trả về cho hàm gọi <code>Thêm đoạn văn</code>.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 15: ACT-13 - XÓA ĐOẠN VĂN -->
+      <section id="slide-15" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-warning px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-13</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Đoạn Văn &bull; Actor: Người Dùng</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Xóa Đoạn Văn (Cascade Lỗi Ngữ Pháp)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-13-xoa-doan-van.svg', 'ACT-13: Xóa đoạn văn')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-13-xoa-doan-van.svg" alt="ACT-13" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-13: Xóa đoạn văn')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-red-50/60 rounded-xl border border-red-100">
+                <h4 class="font-bold text-red-900 mb-1 text-sm">🎯 Xóa Đoạn Văn &amp; Chống IDOR</h4>
+                <p>Gỡ bỏ đoạn văn khỏi lịch sử học tập. Endpoint: <code>DELETE /api/phrases/{id}</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Gửi yêu cầu xóa:</strong> Người dùng bấm Xóa câu văn trên danh sách.</li>
+                  <li><strong>Kiểm tra JWT:</strong> Xác thực danh tính qua token (401 nếu lỗi).</li>
+                  <li><strong>Kiểm tra quyền sở hữu (IDOR Check):</strong> Truy vấn bản ghi trong bảng <code>phrases</code>. So sánh <code>phrase.user_id == current_user.id</code>. Nếu người dùng cố xóa câu của người khác &rarr; chặn ngay với mã <span class="badge-danger px-1.5 py-0.5 rounded font-bold">403 Forbidden</span>.</li>
+                  <li><strong>Xóa CSDL &amp; Cascade:</strong> Xóa bản ghi trong bảng <code>phrases</code>. Do có cấu hình <code>ON DELETE CASCADE</code>, tất cả bản ghi lỗi trong bảng <code>grammar_errors</code> tự động bị xóa đồng thời.</li>
+                  <li><strong>Hoàn tất:</strong> Trả mã <span class="badge-success px-1.5 py-0.5 rounded font-bold">200 OK</span>; UI cập nhật biến mất đoạn văn.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 16: ACT-14 - THÔNG BÁO ÔN TẬP (ANDROID) -->
+      <section id="slide-16" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-cyan px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-14</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Android Platform &bull; Actor: Android OS &amp; User</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Thông Báo Nhắc Nhở Ôn Tập (WorkManager)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-14-thong-bao-on-tap.svg', 'ACT-14: Thông báo ôn tập')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-14-thong-bao-on-tap.svg" alt="ACT-14" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-14: Thông báo ôn tập')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-cyan-50/60 rounded-xl border border-cyan-100">
+                <h4 class="font-bold text-cyan-900 mb-1 text-sm">🎯 Tiến Trình Nền Thông Minh Theo Giờ Hẹn</h4>
+                <p>Sử dụng <code>WorkManager / AlarmManager</code> thức dậy đúng khung giờ học viên đã cài đặt để nhắc nhở học tập kịp thời.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Kích hoạt theo lịch:</strong> Đúng giờ hẹn cài đặt, hệ điều hành Android đánh thức tiến trình nền (Background Worker).</li>
+                  <li><strong>Gọi API kiểm tra số từ đến hạn:</strong> Worker gọi <code>GET /api/words/due-count</code> (kèm JWT đã lưu an toàn).</li>
+                  <li><strong>Xử lý lỗi mạng:</strong> Nếu mất mạng hoặc backend lỗi 5xx &rarr; Worker im lặng ghi log và lên lịch hẹn lần tiếp theo (không tạo thông báo rác làm phiền).</li>
+                  <li><strong>Rẽ nhánh số lượng từ:</strong>
+                    <ul class="list-disc list-inside pl-4 mt-1 space-y-1 text-slate-600">
+                      <li>Nếu <code>dueCount == 0</code>: Không hiện thông báo (hôm nay không có từ cần ôn), hẹn lần tiếp theo.</li>
+                      <li>Nếu <code>dueCount &gt; 0</code>: Kích hoạt <code>NotificationManager</code> hiển thị push: <em>"Hôm nay bạn có N từ cần ôn tập!"</em>.</li>
+                    </ul>
+                  </li>
+                  <li><strong>Tương tác người dùng:</strong> Khi người dùng bấm vào thông báo, ứng dụng khởi chạy với Intent mở thẳng vào tab Ôn tập.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 17: ACT-15 - WIDGET MÀN HÌNH CHÍNH -->
+      <section id="slide-17" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-cyan px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-15</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Android Platform &bull; Actor: Launcher &amp; User</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Widget Màn Hình Chính (AppWidgetProvider)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-15-widget-man-hinh-chinh.svg', 'ACT-15: Widget màn hình chính')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-15-widget-man-hinh-chinh.svg" alt="ACT-15" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-15: Widget màn hình chính')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-cyan-50/60 rounded-xl border border-cyan-100">
+                <h4 class="font-bold text-cyan-900 mb-1 text-sm">🎯 Tiện Ích Màn Hình Home &mdash; Học Tập Tiện Lợi</h4>
+                <p>Theo dõi số lượng từ vựng cần ôn tập ngay trên màn hình chính của điện thoại mà không cần mở ứng dụng.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Thêm tiện ích:</strong> Người dùng thêm widget LEnglish vào màn hình chính Android.</li>
+                  <li><strong>Khởi tạo AppWidgetProvider:</strong> Android kích hoạt hàm cập nhật và lên lịch làm mới định kỳ.</li>
+                  <li><strong>Gọi API lấy số từ:</strong> Widget gửi request kèm access token lấy số từ cần ôn hôm nay.</li>
+                  <li><strong>Cập nhật giao diện RemoteViews:</strong>
+                    <ul class="list-disc list-inside pl-4 mt-1 space-y-1 text-slate-600">
+                      <li>Nếu gọi thành công: Widget hiển thị <em>"N từ cần ôn hôm nay"</em> kèm thanh tiến độ.</li>
+                      <li>Nếu thất bại (mất mạng): Hiển thị trạng thái nhẹ <em>"Không tải được dữ liệu"</em> và thử lại ở chu kỳ tiếp theo.</li>
+                    </ul>
+                  </li>
+                  <li><strong>1-Click Action:</strong> Khi chạm vào widget, ứng dụng mở thẳng vào tab Ôn tập để người dùng bắt đầu học ngay.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 18: ACT-16 - THÊM TỪ TỪ BÔI ĐEN -->
+      <section id="slide-18" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-cyan px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-16</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Android Platform &bull; Actor: Người Dùng &amp; OS</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Thêm Từ Từ Văn Bản Bôi Đen (ACTION_PROCESS_TEXT)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-16-them-tu-tu-bo-chon.svg', 'ACT-16: Thêm từ bôi đen')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-16-them-tu-tu-bo-chon.svg" alt="ACT-16" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-16: Thêm từ bôi đen')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-cyan-50/60 rounded-xl border border-cyan-100">
+                <h4 class="font-bold text-cyan-900 mb-1 text-sm">🎯 Tích Hợp Sâu Hệ Điều Hành (System Context Menu)</h4>
+                <p>Tra và lưu từ vựng ngay khi đang đọc báo trên Chrome, đọc sách PDF hoặc ứng dụng khác mà không cần rời màn hình.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Bôi đen từ vựng:</strong> Người dùng bôi đen một từ tiếng Anh trên bất kỳ ứng dụng nào trong điện thoại.</li>
+                  <li><strong>Menu hệ thống:</strong> Android mở thanh tác vụ nổi &rarr; Người dùng chọn mục <em>"Thêm vào từ điển"</em> (qua Intent <code>ACTION_PROCESS_TEXT</code>).</li>
+                  <li><strong>Mở màn hình Thêm từ:</strong> LEnglish bật form Thêm từ với ô <code>english</code> đã điền sẵn từ vừa bôi đen. Hệ thống có thể gọi gợi ý nghĩa từ AI (Cache-first).</li>
+                  <li><strong>Lưu trữ &amp; Quay lại:</strong> Người dùng kiểm tra nghĩa và bấm Lưu:
+                    <ul class="list-disc list-inside pl-4 mt-1 space-y-1 text-slate-600">
+                      <li>Nếu thành công: Đóng cửa sổ và trở lại đúng vị trí ứng dụng trước đó đang đọc.</li>
+                      <li>Nếu lỗi (401 hết hạn / 409 từ đã có): Giữ màn hình và báo lỗi cụ thể để người dùng điều chỉnh.</li>
+                    </ul>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 19: ACT-17 - QUÉT OCR ĐOẠN VĂN -->
+      <section id="slide-19" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-cyan px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-17</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Android Platform &bull; Actor: Người Dùng &amp; ML Kit</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Quét OCR Lấy Văn Bản Vào Ô Chấm Bài (ML Kit)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-17-scan-ocr-doan-van.svg', 'ACT-17: Quét OCR')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-17-scan-ocr-doan-van.svg" alt="ACT-17" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-17: Quét OCR')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-cyan-50/60 rounded-xl border border-cyan-100">
+                <h4 class="font-bold text-cyan-900 mb-1 text-sm">🎯 Nhận Diện Chữ On-Device &mdash; Không Tải Ảnh Lên Mạng</h4>
+                <p>Sử dụng Google ML Kit Text Recognition chạy trực tiếp trên thiết bị, bảo mật dữ liệu tuyệt đối và tiết kiệm băng thông.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Chọn nguồn ảnh:</strong> Người dùng bấm nút <em>"Quét ảnh"</em> trong màn hình Chấm bài; chụp ảnh hoặc chọn từ thư viện.</li>
+                  <li><strong>Kiểm tra quyền Android:</strong> Yêu cầu quyền Camera/Bộ nhớ nếu chưa được cấp.</li>
+                  <li><strong>Tiền xử lý ảnh on-device:</strong> Cắt vùng chọn, tăng độ tương phản và nhị phân hóa ảnh để tối ưu chất lượng nhận diện.</li>
+                  <li><strong>Chạy mô hình ML Kit:</strong> Thực thi OCR ngay trên CPU/NPU điện thoại:
+                    <ul class="list-disc list-inside pl-4 mt-1 space-y-1 text-slate-600">
+                      <li>Nếu không tìm thấy chữ: Báo lỗi <em>"Không tìm thấy văn bản trong ảnh"</em>.</li>
+                      <li>Nếu nhận diện thành công: Trích xuất chuỗi văn bản thô &rarr; Tự động điền vào ô nhập liệu để người dùng rà soát trước khi gửi chấm AI.</li>
+                    </ul>
+                  </li>
+                  <li><strong>Gửi chấm:</strong> Người dùng chỉnh sửa (nếu cần) và bấm nút Chấm bài để chuyển sang luồng ACT-11.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 20: ACT-18 - DỌN REFRESH TOKEN (SERVER SCHEDULER) -->
+      <section id="slide-20" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-purple px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-18</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Tài Khoản &bull; Actor: Bộ Định Thời Server</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Dọn Refresh Token Hết Hạn (@Scheduled Server)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-18-don-refresh-token.svg', 'ACT-18: Dọn refresh token')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-18-don-refresh-token.svg" alt="ACT-18" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-18: Dọn refresh token')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-purple-50/60 rounded-xl border border-purple-100">
+                <h4 class="font-bold text-purple-900 mb-1 text-sm">🎯 Tác Vụ Bảo Trì Tự Động Chạy Định Kỳ</h4>
+                <p>Tiến trình nền chạy trên Server thông qua Cron Job của Spring Boot (<code>@Scheduled</code>). Hoàn toàn tự động, <strong>KHÔNG do người dùng gọi</strong>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Kích hoạt theo cron:</strong> Đến khung giờ cố định ban đêm mỗi ngày (ví dụ: 03:00 AM), bộ định thời tự động thức dậy.</li>
+                  <li><strong>Truy vấn token quá hạn:</strong> Thực hiện câu lệnh SQL tìm kiếm: <code>SELECT * FROM refresh_tokens WHERE expiry_date &lt; CURRENT_TIMESTAMP</code>.</li>
+                  <li><strong>Rẽ nhánh &amp; Thực thi:</strong>
+                    <ul class="list-disc list-inside pl-4 mt-1 space-y-1 text-slate-600">
+                      <li>Nếu không có token hết hạn &rarr; Kết thúc tác vụ êm thắm.</li>
+                      <li>Nếu có token hết hạn &rarr; Thực thi <code>DELETE</code> hàng loạt khỏi database, chỉ giữ lại các token còn hạn sử dụng.</li>
+                    </ul>
+                  </li>
+                  <li><strong>Ghi log hệ thống:</strong> Ghi log số lượng token đã dọn dẹp để phục vụ giám sát vận hành.</li>
+                </ol>
+              </div>
+
+              <div class="p-3 bg-slate-100 rounded-lg border border-slate-200">
+                <strong>💡 Phân biệt với ACT-04:</strong> ACT-04 dọn token hết hạn <em>theo yêu cầu</em> khi user truy cập; còn ACT-18 dọn <em>định kỳ toàn diện</em> để bảng CSDL không bị phình to bởi các phiên bị bỏ rơi.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 21: ACT-19 - XÁC NHẬN ÔN TẬP (SRS) -->
+      <section id="slide-21" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-success px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-19</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: Từ Vựng &bull; Actor: Người Dùng</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Xác Nhận Ôn Tập (Thuật Toán Spaced Repetition SRS)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-19-xac-nhan-on-tap.svg', 'ACT-19: Xác nhận ôn tập')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-19-xac-nhan-on-tap.svg" alt="ACT-19" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-19: Xác nhận ôn tập')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100">
+                <h4 class="font-bold text-emerald-900 mb-1 text-sm">🎯 Cập Nhật Chu Kỳ Ôn Tập Ngắt Quãng SRS</h4>
+                <p>Luồng máy chủ duy nhất ghi nhận kết quả học tập và dời lịch ôn tiếp theo theo đường cong quên lãng Ebbinghaus. Endpoint: <code>POST /api/words/review</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Gửi danh sách từ đã ôn:</strong> Người dùng hoàn thành lượt ôn tập và gửi mảng <code>wordIds</code> lên server.</li>
+                  <li><strong>Kiểm tra JWT &amp; Sở hữu nghiêm ngặt:</strong> Thẩm định token (401 nếu lỗi). Kiểm tra toàn bộ <code>wordIds</code> phải thuộc về <code>current_user.id</code>; nếu có ID lạ &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">403 Forbidden</span> (chống IDOR).</li>
+                  <li><strong>Vòng lặp tính toán giãn cách (SRS Algorithm):</strong> Với từng từ:
+                    <ul class="list-disc list-inside pl-4 mt-1 space-y-1 text-slate-600 font-mono text-[11px]">
+                      <li><code>review_count = review_count + 1</code></li>
+                      <li>Khoảng cách ngày giãn dần: <strong>1, 2, 4, 7, 14, 30... ngày</strong> tương ứng số lần đã ôn.</li>
+                      <li><code>next_review = now() + khoảng_cách</code></li>
+                      <li><code>updated_at = now()</code></li>
+                    </ul>
+                  </li>
+                  <li><strong>Lưu Batch CSDL:</strong> Cập nhật toàn bộ các từ trong một transaction.</li>
+                  <li><strong>Phản hồi:</strong> Trả mã <span class="badge-success px-1.5 py-0.5 rounded font-bold">200 OK</span> + số từ đã xác nhận; UI loại bỏ các từ vừa ôn xong khỏi danh sách đến hạn hôm nay.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 22: ACT-20 - THÊM TỪ THEO CHỦ ĐỀ (AI) -->
+      <section id="slide-22" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge-purple px-2.5 py-0.5 rounded-full text-xs font-bold">ACT-20</span>
+                <span class="text-xs text-slate-500 font-semibold uppercase">Nhóm: AI Engine &bull; Actor: Người Dùng &amp; AI</span>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900">Thêm Từ Theo Chủ Đề (AI Sinh 10 Từ Mới)</h2>
+            </div>
+            <button onclick="openZoom('./activity/act-20-them-tu-theo-chu-de.svg', 'ACT-20: Thêm từ theo chủ đề')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Phóng to
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center min-h-[420px]">
+              <img src="./activity/act-20-them-tu-theo-chu-de.svg" alt="ACT-20" class="diagram-img rounded shadow-sm" onclick="openZoom(this.src, 'ACT-20: Thêm từ theo chủ đề')">
+            </div>
+            <div class="lg:col-span-7 space-y-4 text-xs text-slate-700">
+              <div class="p-3 bg-purple-50/60 rounded-xl border border-purple-100">
+                <h4 class="font-bold text-purple-900 mb-1 text-sm">🎯 Sinh Hàng Loạt Từ Vựng &mdash; Lọc Trùng Tuyệt Đối</h4>
+                <p>Người dùng nhập một chủ đề bất kỳ (vd: "phỏng vấn xin việc", "môi trường") &rarr; AI duyệt chủ đề, loại trừ toàn bộ từ đã có trong sổ và nạp 10 từ mới vào sổ trong 1 Transaction. Endpoint: <code>POST /api/words/generate-topic</code>.</p>
+              </div>
+
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm mb-2">🔄 Chi Tiết Luồng Hoạt Động (Quy Chuẩn 4 Bước)</h4>
+                <ol class="space-y-2 list-decimal list-inside text-slate-700 leading-relaxed">
+                  <li><strong>Thẩm định chủ đề (AI Step 1):</strong> AI kiểm tra input có phải một chủ đề có nghĩa không. Nếu là chuỗi ký tự ngẫu nhiên hoặc vô nghĩa &rarr; trả ngay <span class="badge-danger px-1.5 py-0.5 rounded font-bold">400 Bad Request</span> ("Chủ đề không hợp lệ, vui lòng nhập lại").</li>
+                  <li><strong>Xây dựng danh sách loại trừ (Exclusion List):</strong> Truy vấn toàn bộ cột <code>english</code> trong bảng <code>words</code> của user hiện tại &rarr; gửi kèm vào prompt cho AI để tuyệt đối không sinh trùng từ đã có.</li>
+                  <li><strong>AI sinh 10 từ chất lượng (Step 2):</strong> AI sinh 10 từ mới kèm đầy đủ: nghĩa tiếng Việt, phiên âm, từ loại, câu ví dụ và cấp độ CEFR. Nếu AI lỗi/timeout &rarr; trả <span class="badge-danger px-1.5 py-0.5 rounded font-bold">502</span>, không ghi CSDL.</li>
+                  <li><strong>Ghi CSDL an toàn (Batch Transaction):</strong>
+                    <ul class="list-disc list-inside pl-4 mt-1 space-y-1 text-slate-600">
+                      <li>Nếu từ chưa có trong <code>word_cache</code> &rarr; ghi bổ sung vào cache dùng chung.</li>
+                      <li>Luôn ghi vào <code>words</code> và <code>word_values</code> gắn với user.</li>
+                      <li>Nếu xảy ra xung đột <code>UNIQUE (user_id, english)</code> &rarr; tự động Rollback toàn bộ 10 từ.</li>
+                    </ul>
+                  </li>
+                  <li><strong>Hoàn tất:</strong> Trả mã <span class="badge-success px-1.5 py-0.5 rounded font-bold">200 OK</span> cùng danh sách 10 từ mới; sổ từ vựng được cập nhật ngay lập tức.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SLIDE 5: PHẦN 3: CÔNG NGHỆ SỬ DỤNG -->
+      <!-- ============================================================== -->
+      <section id="slide-part-3" class="slide">
+        <div class="glass-card rounded-2xl p-8 lg:p-12 shadow-2xl bg-white border border-slate-200 min-h-[calc(100vh-12rem)] flex items-center justify-center">
+          <h1 class="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight text-center">
+            Phần 3: Công Nghệ Sử Dụng
+          </h1>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SLIDE: CÔNG NGHỆ 1 — FLUTTER (CLIENT TIER) -->
+      <!-- ============================================================== -->
+      <section id="slide-tech-flutter" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <!-- Header -->
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold badge-cyan">CÔNG NGHỆ 1 &bull; CLIENT TIER</span>
+                <span class="text-xs text-slate-600 font-semibold font-mono">Google Flutter &bull; Dart Language &bull; Mobile App</span>
+              </div>
+              <h2 class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Flutter — Giao Diện Ứng Dụng Di Động</h2>
+              <p class="text-sm text-slate-700 font-medium mt-0.5">Xây dựng ứng dụng học thông minh đa nền tảng, mượt mà và tích hợp sâu dịch vụ hệ điều hành.</p>
+            </div>
+            <span class="px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 font-mono text-xs font-bold border border-sky-200 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-sky-500"></span> Flutter 3.x &bull; 60/120fps
+            </span>
+          </div>
+
+          <!-- 3-Column Balanced Layout -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-sm text-slate-800">
+            <!-- Col 1: Mục đích -->
+            <div class="p-5 rounded-2xl border-2 border-sky-200 bg-sky-50/80 shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <h3 class="font-black text-sky-950 text-base mb-3 flex items-center gap-2">
+                  <span>🎯</span> 1. Mục Đích Sử Dụng
+                </h3>
+                <ul class="space-y-3 leading-relaxed">
+                  <li class="flex items-start gap-2">
+                    <span class="text-sky-600 font-bold">&bull;</span>
+                    <span><strong class="text-sky-950 font-bold bg-sky-100/90 px-1 py-0.5 rounded">Single Codebase:</strong> 1 bộ mã nguồn dùng chung cho cả Android &amp; iOS, rút ngắn 50% thời gian phát triển.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-sky-600 font-bold">&bull;</span>
+                    <span><strong class="text-sky-950 font-bold bg-sky-100/90 px-1 py-0.5 rounded">Hiệu năng 60/120fps:</strong> Dựng hình trực tiếp qua Skia/Impeller, loại bỏ hoàn toàn độ trễ JavaScript Bridge.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-sky-600 font-bold">&bull;</span>
+                    <span><strong class="text-sky-950 font-bold bg-sky-100/90 px-1 py-0.5 rounded">Trợ lý bỏ túi:</strong> Mang công cụ học từ vựng và chấm bài AI luôn đồng hành bên người học mọi lúc, mọi nơi.</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="p-2.5 rounded-xl bg-sky-100/90 border border-sky-300 text-xs text-sky-950 font-bold flex items-center gap-1.5">
+                <span>&rarr;</span>
+                <span>Tối ưu tối đa trải nghiệm và sự tiện lợi cho người dùng cuối</span>
+              </div>
+            </div>
+
+            <!-- Col 2: Vai trò trong hệ thống -->
+            <div class="p-5 rounded-2xl border-2 border-indigo-200 bg-indigo-50/80 shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <h3 class="font-black text-indigo-950 text-base mb-3 flex items-center gap-2">
+                  <span>⚙️</span> 2. Vai Trò Trong Hệ Thống
+                </h3>
+                <ul class="space-y-3 leading-relaxed">
+                  <li class="flex items-start gap-2">
+                    <span class="text-indigo-600 font-bold">&bull;</span>
+                    <span><strong class="text-indigo-950 font-bold bg-indigo-100/90 px-1 py-0.5 rounded">Giao diện tương tác:</strong> Cung cấp Flashcard lật thẻ 2 mặt (Anh &ndash; Việt, IPA, ví dụ) giúp ghi nhớ phản xạ.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-indigo-600 font-bold">&bull;</span>
+                    <span><strong class="text-indigo-950 font-bold bg-indigo-100/90 px-1 py-0.5 rounded">Hiển thị chấm bài:</strong> Làm nổi bật trực quan các từ sai ngữ pháp kèm thẻ giải thích chi tiết tiếng Việt.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-indigo-600 font-bold">&bull;</span>
+                    <span><strong class="text-indigo-950 font-bold bg-indigo-100/90 px-1 py-0.5 rounded">Xử lý phiên ngầm (JWT):</strong> Tự bắt lỗi 401 để kích hoạt Refresh Token ngầm không làm gián đoạn việc học.</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="p-2.5 rounded-xl bg-indigo-100/90 border border-indigo-300 text-xs text-indigo-950 font-bold flex items-center gap-1.5">
+                <span>&rarr;</span>
+                <span>Cầu nối trực quan, liền mạch giữa người học và máy chủ</span>
+              </div>
+            </div>
+
+            <!-- Col 3: 4 Tính năng Android nổi bật -->
+            <div class="p-5 rounded-2xl border-2 border-sky-200 bg-white shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <h3 class="font-black text-slate-900 text-base mb-3 flex items-center justify-between">
+                  <span class="flex items-center gap-2"><span>⭐</span> 3. Tích Hợp Sâu Android</span>
+                  <span class="badge-cyan px-2 py-0.5 rounded text-xs font-bold">OS Deep</span>
+                </h3>
+                <div class="space-y-2.5">
+                  <div class="p-2.5 rounded-xl bg-sky-50/70 border border-sky-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">✂️ Bôi Đen Thêm Từ (ACT-16)</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Đọc báo ngoài &rarr; Bôi đen từ &rarr; Bật form lưu vào app ngay.</div>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-sky-50/70 border border-sky-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">⏰ Nhắc Học Tự Động (ACT-14)</div>
+                    <div class="text-slate-800 text-xs mt-0.5">WorkManager chạy ngầm &rarr; Bắn Notification đúng giờ có từ ôn.</div>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-sky-50/70 border border-sky-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">📱 Widget Home Screen (ACT-15)</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Xem số từ cần học và ôn thẻ ngay ngoài màn hình chính.</div>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-sky-50/70 border border-sky-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">📷 Quét Chữ OCR On-Device (ACT-17)</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Chụp trang sách &rarr; Trích xuất chữ trên chip máy, bảo mật 100%.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Banner -->
+          <div class="mt-5 p-3 rounded-xl bg-gradient-to-r from-sky-100 to-indigo-100 border border-sky-300 text-sky-950 font-semibold text-xs md:text-sm flex items-center gap-2">
+            <span class="text-base">💡</span>
+            <span><strong>Ý nghĩa kiến trúc:</strong> Flutter đóng vai trò lớp giao diện trực tiếp (Boundary Tier), đưa AI và giải thuật học tập đến đầu ngón tay người dùng.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SLIDE: CÔNG NGHỆ 2 — JAVA SPRING BOOT (BACKEND TIER) -->
+      <!-- ============================================================== -->
+      <section id="slide-tech-springboot" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <!-- Header -->
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold badge-success">CÔNG NGHỆ 2 &bull; BACKEND TIER</span>
+                <span class="text-xs text-slate-600 font-semibold font-mono">Java 17+ &bull; Spring Boot 3.x &bull; RESTful API</span>
+              </div>
+              <h2 class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Java Spring Boot — Máy Chủ Xử Lý Nghiệp Vụ</h2>
+              <p class="text-sm text-slate-700 font-medium mt-0.5">Trục điều phối trung tâm quản trị xác thực, giải thuật học tập và kết nối trí tuệ nhân tạo.</p>
+            </div>
+            <span class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-mono text-xs font-bold border border-emerald-200 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Spring Boot 3 &bull; Enterprise
+            </span>
+          </div>
+
+          <!-- 3-Column Balanced Layout -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-sm text-slate-800">
+            <!-- Col 1: Mục đích -->
+            <div class="p-5 rounded-2xl border-2 border-emerald-200 bg-emerald-50/80 shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <h3 class="font-black text-emerald-950 text-base mb-3 flex items-center gap-2">
+                  <span>🎯</span> 1. Mục Đích Sử Dụng
+                </h3>
+                <ul class="space-y-3 leading-relaxed">
+                  <li class="flex items-start gap-2">
+                    <span class="text-emerald-600 font-bold">&bull;</span>
+                    <span><strong class="text-emerald-950 font-bold bg-emerald-100/90 px-1 py-0.5 rounded">Bộ não xử lý trung tâm:</strong> Quản lý tập trung mọi logic nghiệp vụ, tính điểm AI và xác thực bảo mật tại máy chủ.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-emerald-600 font-bold">&bull;</span>
+                    <span><strong class="text-emerald-950 font-bold bg-emerald-100/90 px-1 py-0.5 rounded">Chuẩn hóa RESTful JSON:</strong> Độc lập nền tảng, dễ dàng phục vụ nhiều loại client (Mobile, Web, Desktop).</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-emerald-600 font-bold">&bull;</span>
+                    <span><strong class="text-emerald-950 font-bold bg-emerald-100/90 px-1 py-0.5 rounded">Độ tin cậy doanh nghiệp:</strong> Kiến trúc phân tầng rõ ràng, dễ bảo trì, dễ viết kiểm thử tự động (Unit Test).</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="p-2.5 rounded-xl bg-emerald-100/90 border border-emerald-300 text-xs text-emerald-950 font-bold flex items-center gap-1.5">
+                <span>&rarr;</span>
+                <span>Đảm bảo hệ thống vận hành ổn định, chính xác và có thể mở rộng</span>
+              </div>
+            </div>
+
+            <!-- Col 2: Vai trò trong hệ thống -->
+            <div class="p-5 rounded-2xl border-2 border-teal-200 bg-teal-50/80 shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <h3 class="font-black text-teal-950 text-base mb-3 flex items-center gap-2">
+                  <span>⚙️</span> 2. Vai Trò Trong Hệ Thống
+                </h3>
+                <ul class="space-y-3 leading-relaxed">
+                  <li class="flex items-start gap-2">
+                    <span class="text-teal-600 font-bold">&bull;</span>
+                    <span><strong class="text-teal-950 font-bold bg-teal-100/90 px-1 py-0.5 rounded">Xác thực &amp; Phân quyền:</strong> Xử lý đăng ký, đăng nhập, mã hóa mật khẩu và cấp phát JWT token an toàn.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-teal-600 font-bold">&bull;</span>
+                    <span><strong class="text-teal-950 font-bold bg-teal-100/90 px-1 py-0.5 rounded">Điều phối giải thuật SRS:</strong> Tự động tính toán ngày ôn tập giãn cách tiếp theo cho từng từ vựng.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-teal-600 font-bold">&bull;</span>
+                    <span><strong class="text-teal-950 font-bold bg-teal-100/90 px-1 py-0.5 rounded">Tích hợp AI:</strong> Điều phối prompt sinh 10 từ theo chủ đề và chấm bài viết ngữ pháp chuẩn xác.</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="p-2.5 rounded-xl bg-teal-100/90 border border-teal-300 text-xs text-teal-950 font-bold flex items-center gap-1.5">
+                <span>&rarr;</span>
+                <span>Trọng tâm điều phối toàn bộ luồng nghiệp vụ và dữ liệu</span>
+              </div>
+            </div>
+
+            <!-- Col 3: Điểm nhấn kỹ thuật -->
+            <div class="p-5 rounded-2xl border-2 border-emerald-200 bg-white shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <h3 class="font-black text-slate-900 text-base mb-3 flex items-center justify-between">
+                  <span class="flex items-center gap-2"><span>⭐</span> 3. Điểm Nhấn Kỹ Thuật</span>
+                  <span class="badge-success px-2 py-0.5 rounded text-xs font-bold">Backend Core</span>
+                </h3>
+                <div class="space-y-2.5">
+                  <div class="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">🛡️ Bảo Mật BCrypt &amp; Chống IDOR</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Băm mật khẩu 60 ký tự; chặn 100% sửa/xóa trộm dữ liệu người khác (403).</div>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">🔄 Token Rotation &amp; Cron Tự Động</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Xoay vòng token dùng 1 lần; Scheduler tự động xóa sạch token hết hạn mỗi đêm.</div>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">📈 Thuật Toán SRS Lặp Ngắt Quãng</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Giãn cách ngày ôn (1, 2, 4, 7, 15, 30 ngày) theo đường cong trí nhớ Ebbinghaus.</div>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">⚡ Cache-First &amp; Giao Dịch ACID</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Tra từ đệm trước để tiết kiệm AI; Rollback 100% nếu lỗi sinh 10 từ.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Banner -->
+          <div class="mt-5 p-3 rounded-xl bg-gradient-to-r from-emerald-100 to-teal-100 border border-emerald-300 text-emerald-950 font-semibold text-xs md:text-sm flex items-center gap-2">
+            <span class="text-base">💡</span>
+            <span><strong>Ý nghĩa kiến trúc:</strong> Spring Boot đóng vai trò bộ não điều hành (Business Tier), bảo đảm an toàn dữ liệu, chuẩn hóa giải thuật và vận hành ổn định hệ thống.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- SLIDE: CÔNG NGHỆ 3 — MYSQL (DATA TIER) -->
+      <!-- ============================================================== -->
+      <section id="slide-tech-mysql" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <!-- Header -->
+          <div class="border-b border-slate-200 pb-4 mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold badge-warning">CÔNG NGHỆ 3 &bull; DATA TIER</span>
+                <span class="text-xs text-slate-600 font-semibold font-mono">MySQL &bull; InnoDB Engine &bull; Spring Data JPA</span>
+              </div>
+              <h2 class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">MySQL — Cơ Sở Dữ Liệu Quan Hệ</h2>
+              <p class="text-sm text-slate-700 font-medium mt-0.5">Nền móng lưu trữ dữ liệu bền vững với 8 bảng quan hệ chuẩn hóa 1NF, toàn vẹn tham chiếu và bộ đệm toàn cục.</p>
+            </div>
+            <span class="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 font-mono text-xs font-bold border border-amber-200 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> MySQL &bull; InnoDB ACID
+            </span>
+          </div>
+
+          <!-- 3-Column Balanced Layout -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-sm text-slate-800">
+            <!-- Col 1: Mục đích -->
+            <div class="p-5 rounded-2xl border-2 border-amber-200 bg-amber-50/80 shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <h3 class="font-black text-amber-950 text-base mb-3 flex items-center gap-2">
+                  <span>🎯</span> 1. Mục Đích Sử Dụng
+                </h3>
+                <ul class="space-y-3 leading-relaxed">
+                  <li class="flex items-start gap-2">
+                    <span class="text-amber-600 font-bold">&bull;</span>
+                    <span><strong class="text-amber-950 font-bold bg-amber-100/90 px-1 py-0.5 rounded">Lưu trữ bền vững:</strong> Engine InnoDB tuân thủ ACID, bảo vệ dữ liệu học tập an toàn trước mọi sự cố sập nguồn.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-amber-600 font-bold">&bull;</span>
+                    <span><strong class="text-amber-950 font-bold bg-amber-100/90 px-1 py-0.5 rounded">Tổ chức chuẩn mực:</strong> 8 bảng dữ liệu quan hệ được chuẩn hóa 1NF, phân định 4 phân hệ chức năng rõ ràng.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-amber-600 font-bold">&bull;</span>
+                    <span><strong class="text-amber-950 font-bold bg-amber-100/90 px-1 py-0.5 rounded">Truy vấn tốc độ cao:</strong> Tối ưu chỉ mục (Index) và quan hệ khóa ngoại phục vụ truy xuất nhanh cho Spring Boot.</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="p-2.5 rounded-xl bg-amber-100/90 border border-amber-300 text-xs text-amber-950 font-bold flex items-center gap-1.5">
+                <span>&rarr;</span>
+                <span>Đảm bảo toàn vẹn, nhất quán và không thất thoát dữ liệu</span>
+              </div>
+            </div>
+
+            <!-- Col 2: Vai trò trong hệ thống -->
+            <div class="p-5 rounded-2xl border-2 border-orange-200 bg-orange-50/80 shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <h3 class="font-black text-orange-950 text-base mb-3 flex items-center gap-2">
+                  <span>⚙️</span> 2. Vai Trò Trong Hệ Thống
+                </h3>
+                <ul class="space-y-3 leading-relaxed">
+                  <li class="flex items-start gap-2">
+                    <span class="text-orange-600 font-bold">&bull;</span>
+                    <span><strong class="text-orange-950 font-bold bg-orange-100/90 px-1 py-0.5 rounded">Quản lý 4 phân hệ:</strong> Lưu trữ người dùng (Tài khoản), từ vựng (Sổ từ), bài viết (Luyện viết) và kho đệm (Cache).</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-orange-600 font-bold">&bull;</span>
+                    <span><strong class="text-orange-950 font-bold bg-orange-100/90 px-1 py-0.5 rounded">Bảo toàn quan hệ 1-N:</strong> Quản lý chặt chẽ liên kết giữa từ vựng với danh sách nghĩa, ví dụ minh họa và lỗi câu.</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-orange-600 font-bold">&bull;</span>
+                    <span><strong class="text-orange-950 font-bold bg-orange-100/90 px-1 py-0.5 rounded">Kho đệm dùng chung:</strong> Bảng <code>word_cache</code> lưu các từ AI đã sinh nghĩa để mọi người dùng cùng tái sử dụng.</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="p-2.5 rounded-xl bg-orange-100/90 border border-orange-300 text-xs text-orange-950 font-bold flex items-center gap-1.5">
+                <span>&rarr;</span>
+                <span>Nền tảng cốt lõi duy trì tính liên tục và độ tin cậy dữ liệu</span>
+              </div>
+            </div>
+
+            <!-- Col 3: Điểm nhấn kỹ thuật -->
+            <div class="p-5 rounded-2xl border-2 border-amber-200 bg-white shadow-sm flex flex-col justify-between space-y-3">
+              <div>
+                <h3 class="font-black text-slate-900 text-base mb-3 flex items-center justify-between">
+                  <span class="flex items-center gap-2"><span>⭐</span> 3. Điểm Nhấn Kỹ Thuật</span>
+                  <span class="badge-warning px-2 py-0.5 rounded text-xs font-bold">Data Core</span>
+                </h3>
+                <div class="space-y-2.5">
+                  <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">📐 Chuẩn Hóa 1NF Triệt Để</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Bảng con tách riêng 5 cột (nghĩa, ví dụ, dịch, IPA, loại từ), không ghép chuỗi.</div>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">🔗 Tự Động Xóa Sạch (Cascade)</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Xóa từ/câu sẽ tự động xóa sạch nghĩa con; triệt tiêu 100% dữ liệu rác mồ côi.</div>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">🔒 Ràng Buộc UNIQUE &amp; CHECK</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Chống lưu trùng từ trong cùng một sổ; điểm số bài viết luôn nằm trong 0&ndash;10.</div>
+                  </div>
+                  <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/90 shadow-sm">
+                    <div class="font-bold text-slate-950 text-xs">⚡ Đệm word_cache Tốc Độ Cao (~10ms)</div>
+                    <div class="text-slate-800 text-xs mt-0.5">Không gắn user; ai tra từ đã có là nhận ngay trong ~10ms, tiết kiệm 100% quota AI.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Banner -->
+          <div class="mt-5 p-3 rounded-xl bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-300 text-amber-950 font-semibold text-xs md:text-sm flex items-center gap-2">
+            <span class="text-base">💡</span>
+            <span><strong>Ý nghĩa kiến trúc:</strong> MySQL đóng vai trò tầng lưu trữ (Data Tier) bảo đảm tính toàn vẹn tham chiếu, giao dịch an toàn và tối ưu tài nguyên toàn hệ thống.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 23: TỔNG KẾT KIẾN TRÚC & TIÊU CHUẨN KỸ THUẬT -->
+      <section id="slide-23" class="slide">
+        <div class="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl bg-white border border-slate-200">
+          <div class="border-b border-slate-200 pb-5 mb-6">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold badge-primary">TỔNG KẾT HỆ THỐNG</span>
+              <span class="text-xs text-slate-600 font-semibold font-mono">Kiến Trúc &bull; An Toàn Dữ Liệu &bull; Hiệu Năng</span>
+            </div>
+            <h2 class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Tổng Kết Kiến Trúc &amp; Tiêu Chuẩn Kỹ Thuật</h2>
+            <p class="text-sm text-slate-700 font-medium mt-1">Các nguyên lý cốt lõi bảo đảm tính tin cậy, bảo mật và hiệu năng cao cho hệ thống LEnglish.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-slate-800">
+            <!-- Pillar 1: Security -->
+            <div class="p-5 bg-blue-50/70 rounded-2xl border-2 border-blue-200 space-y-3 shadow-sm">
+              <div class="flex items-center gap-2 text-base font-black text-blue-950">
+                <span class="text-blue-600 text-lg">🛡️</span> Bảo Mật &amp; Kiểm Soát Truy Cập
+              </div>
+              <ul class="space-y-2.5 leading-relaxed">
+                <li>&bull; <strong class="text-blue-950 font-bold bg-blue-100/90 px-1 py-0.5 rounded">BCrypt Password Hashing:</strong> Mật khẩu băm với salt tự động, độ dài 60 ký tự, chống rò rỉ cơ sở dữ liệu.</li>
+                <li>&bull; <strong class="text-blue-950 font-bold bg-blue-100/90 px-1 py-0.5 rounded">Refresh Token Rotation:</strong> Dùng một lần rồi hủy, sinh cặp token mới; dọn dẹp định kỳ bởi server scheduler.</li>
+                <li>&bull; <strong class="text-blue-950 font-bold bg-blue-100/90 px-1 py-0.5 rounded">Chống IDOR Toàn Diện:</strong> Mọi thao tác Sửa/Xóa từ, Xóa đoạn văn, Xác nhận ôn tập đều kiểm tra quyền sở hữu (<code>user_id</code>), chặn tấn công thay đổi ID tài nguyên (403).</li>
+              </ul>
+            </div>
+
+            <!-- Pillar 2: Data Integrity -->
+            <div class="p-5 bg-emerald-50/70 rounded-2xl border-2 border-emerald-200 space-y-3 shadow-sm">
+              <div class="flex items-center gap-2 text-base font-black text-emerald-950">
+                <span class="text-emerald-600 text-lg">🗄️</span> Toàn Vẹn &amp; Chuẩn Hóa CSDL
+              </div>
+              <ul class="space-y-2.5 leading-relaxed">
+                <li>&bull; <strong class="text-emerald-950 font-bold bg-emerald-100/90 px-1 py-0.5 rounded">Chuẩn Hóa 1NF:</strong> Tách triệt để thuộc tính đa trị của từ (nghĩa, ví dụ, phiên âm, từ loại) sang bảng con, loại bỏ ghép chuỗi phi cấu trúc.</li>
+                <li>&bull; <strong class="text-emerald-950 font-bold bg-emerald-100/90 px-1 py-0.5 rounded">ACID Transactions:</strong> Thao tác lưu từ, sửa từ, sinh 10 từ theo chủ đề thực thi trong transaction nguyên tử; vi phạm Unique sẽ tự động rollback an toàn.</li>
+                <li>&bull; <strong class="text-emerald-950 font-bold bg-emerald-100/90 px-1 py-0.5 rounded">ON DELETE CASCADE:</strong> Triệt tiêu nguy cơ mồ côi dữ liệu khi người dùng xóa từ vựng hoặc đoạn văn.</li>
+              </ul>
+            </div>
+
+            <!-- Pillar 3: AI & Performance -->
+            <div class="p-5 bg-purple-50/70 rounded-2xl border-2 border-purple-200 space-y-3 shadow-sm">
+              <div class="flex items-center gap-2 text-base font-black text-purple-950">
+                <span class="text-purple-600 text-lg">⚡</span> Tối Ưu Hiệu Năng &amp; AI
+              </div>
+              <ul class="space-y-2.5 leading-relaxed">
+                <li>&bull; <strong class="text-purple-950 font-bold bg-purple-100/90 px-1 py-0.5 rounded">Cache-First Strategy:</strong> Kho từ vựng chung (<code>word_cache</code>) giúp đáp ứng ngay kết quả sinh nghĩa cho các từ phổ biến, tiết kiệm tối đa quota AI.</li>
+                <li>&bull; <strong class="text-purple-950 font-bold bg-purple-100/90 px-1 py-0.5 rounded">On-Device Machine Learning:</strong> Nhận diện chữ OCR bằng Google ML Kit chạy trực tiếp trên chip điện thoại, không cần tải ảnh lên cloud, đảm bảo quyền riêng tư.</li>
+                <li>&bull; <strong class="text-purple-950 font-bold bg-purple-100/90 px-1 py-0.5 rounded">Thuật toán SRS Spaced Repetition:</strong> Tối ưu chu kỳ ghi nhớ từ vựng khoa học dựa trên lịch sử số lần ôn tập cá nhân hóa.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-8 p-4 bg-blue-600 text-white rounded-xl flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h4 class="font-bold text-sm">Hệ Thống LEnglish &mdash; Hoàn Toàn Đồng Bộ 1:1 Giữa Thiết Kế &amp; Hiện Thực</h4>
+              <p class="text-xs text-blue-100 mt-0.5">20 Use Cases &bull; 20 Activity Diagrams &bull; 20 Sequence Diagrams &bull; 8 Tables ERD</p>
+            </div>
+            <button onclick="goToSlide(1)" class="px-4 py-2 bg-white text-blue-700 font-bold rounded-lg text-xs hover:bg-blue-50 transition shadow">
+              Về Trang Mở Đầu &uarr;
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- BOTTOM NAVIGATION & SHORTCUT FOOTER -->
+  <footer class="h-14 bg-slate-900 border-t border-slate-800 text-slate-400 px-6 flex items-center justify-between text-xs shrink-0 z-30">
+    <div class="flex items-center space-x-2">
+      <span class="hidden sm:inline">Phím tắt:</span>
+      <kbd class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[11px]">&larr;</kbd>
+      <kbd class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[11px]">&rarr;</kbd>
+      <span class="hidden md:inline text-slate-500">Chuyển trang &bull;</span>
+      <kbd class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[11px]">Space</kbd>
+      <span class="hidden md:inline text-slate-500">Tiếp theo &bull;</span>
+      <kbd class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[11px]">T</kbd>
+      <span class="hidden md:inline text-slate-500">Mục lục &bull;</span>
+      <kbd class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[11px]">F</kbd>
+      <span class="hidden md:inline text-slate-500">Toàn màn hình</span>
+    </div>
+
+    <div class="flex items-center space-x-2">
+      <button onclick="goToSlide(1)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition">Đầu</button>
+      <button onclick="prevSlide()" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1">
+        <span>&larr;</span> <span class="hidden sm:inline">Trước</span>
+      </button>
+      <button onclick="nextSlide()" class="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium transition flex items-center gap-1 shadow-sm">
+        <span class="hidden sm:inline">Sau</span> <span>&rarr;</span>
+      </button>
+      <button onclick="goToSlide(32)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition">Cuối</button>
+    </div>
+  </footer>
+
+  <!-- TABLE OF CONTENTS MODAL (DRAWER) -->
+  <div id="tocModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+      <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">Danh Sách Slide Thuyết Trình</h3>
+          <p class="text-xs text-slate-500">Chọn bất kỳ trang nào để di chuyển tức thì</p>
+        </div>
+        <button onclick="toggleToc()" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-4 overflow-y-auto space-y-1.5 flex-1" id="tocList">
+        <!-- Rendered dynamically via JS -->
+      </div>
+      <div class="p-3 border-t border-slate-200 bg-slate-50 text-right">
+        <button onclick="toggleToc()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-semibold transition">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX / ZOOM MODAL -->
+  <div id="zoomModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex flex-col items-center justify-center p-4">
+    <div class="absolute top-4 right-4 flex items-center space-x-3 z-10">
+      <span id="zoomTitle" class="text-sm font-semibold text-white bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700"></span>
+      <button onclick="closeZoom()" class="p-2 rounded-lg bg-slate-800 hover:bg-red-600 text-white transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="w-full h-full flex items-center justify-center p-4 overflow-auto">
+      <img id="zoomImg" src="" alt="Zoomed Diagram" class="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl bg-white p-2">
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT SLIDE CONTROLLER -->
+  <script>
+    const slidesData = [
+      { id: 'cover-slide', title: 'Mở đầu — Giới thiệu hệ thống LEnglish', section: 'Mở đầu' },
+      { id: 'slide-intro', title: 'Phần 1: Giới thiệu đề tài', section: 'Phần 1: Giới thiệu đề tài', isSectionCover: true },
+      { id: 'slide-problem', title: '1.1. Vấn đề và ý tưởng giải quyết', section: 'Phần 1: Giới thiệu đề tài' },
+      { id: 'slide-mobile-app', title: '1.2. Tại sao là Mobile App? LEnglish là gì?', section: 'Phần 1: Giới thiệu đề tài' },
+      { id: 'slide-part-2', title: 'Phần 2: Phân tích & Thiết kế', section: 'Phần 2: Phân tích & Thiết kế', isSectionCover: true },
+      { id: 'slide-1', title: '2.1. Biểu đồ quan hệ thực thể (ERD)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-2', title: '2.2. Tổng hợp ma trận chức năng hệ thống', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-3', title: 'ACT-01: Tạo tài khoản (Đăng ký)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-4', title: 'ACT-02: Đăng nhập (Authentication)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-5', title: 'ACT-03: Đăng xuất (Logout & Token Revocation)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-6', title: 'ACT-04: Làm mới token (Refresh Token Rotation)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-7', title: 'ACT-05: Xem danh sách từ vựng', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-8', title: 'ACT-06: Thêm từ vựng mới (Multi-Values 1-N)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-9', title: 'ACT-07: Sửa từ vựng (IDOR Guard)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-10', title: 'ACT-08: Xóa từ vựng (Cascade Deletion)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-11', title: 'ACT-09: Sinh nghĩa từ (AI Cache-First)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-12', title: 'ACT-10: Xem danh sách đoạn văn', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-13', title: 'ACT-11: Thêm đoạn văn (Included AI Grading)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-14', title: 'ACT-12: Chấm đoạn văn (AI Hàm nội bộ)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-15', title: 'ACT-13: Xóa đoạn văn (Cascade Deletion)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-16', title: 'ACT-14: Thông báo nhắc nhở ôn tập (WorkManager)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-17', title: 'ACT-15: Widget màn hình chính (Android)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-18', title: 'ACT-16: Thêm từ từ vùng bôi đen (ACTION_PROCESS_TEXT)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-19', title: 'ACT-17: Quét OCR lấy văn bản đoạn văn (ML Kit)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-20', title: 'ACT-18: Dọn refresh token quá hạn (@Scheduled Server)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-21', title: 'ACT-19: Xác nhận ôn tập & Thuật toán SRS', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-22', title: 'ACT-20: Thêm từ mới theo chủ đề (AI 10 từ)', section: 'Phần 2: Phân tích & Thiết kế' },
+      { id: 'slide-part-3', title: 'Phần 3: Công nghệ sử dụng', section: 'Phần 3: Công nghệ sử dụng', isSectionCover: true },
+      { id: 'slide-tech-flutter', title: '3.1. Flutter — Nền tảng ứng dụng di động', section: 'Phần 3: Công nghệ sử dụng' },
+      { id: 'slide-tech-springboot', title: '3.2. Java Spring Boot — Máy chủ backend & Dịch vụ API', section: 'Phần 3: Công nghệ sử dụng' },
+      { id: 'slide-tech-mysql', title: '3.3. MySQL — Cơ sở dữ liệu quan hệ & Lưu trữ', section: 'Phần 3: Công nghệ sử dụng' },
+      { id: 'slide-23', title: '3.4. Tổng kết kiến trúc & Tiêu chuẩn kỹ thuật', section: 'Phần 3: Công nghệ sử dụng' }
+    ];
+
+    const totalSlides = slidesData.length;
+    let currentSlide = 1;
+
+    function updateSlide() {
+      // Hide all slides, activate current slide
+      slidesData.forEach((s, idx) => {
+        const el = document.getElementById(s.id);
+        if (el) {
+          if (idx + 1 === currentSlide) {
+            el.classList.add('active');
+          } else {
+            el.classList.remove('active');
+          }
+        }
+      });
+
+      // Scroll container to top
+      const container = document.querySelector('.slide-container');
+      if (container) container.scrollTop = 0;
+
+      // Update counters & progress bar
+      const currentSlideNumEl = document.getElementById('currentSlideNum');
+      const totalSlidesNumEl = document.getElementById('totalSlidesNum');
+      if (currentSlideNumEl) currentSlideNumEl.innerText = currentSlide;
+      if (totalSlidesNumEl) totalSlidesNumEl.innerText = totalSlides;
+
+      const progressPercent = (currentSlide / totalSlides) * 100;
+      const progressBarEl = document.getElementById('progressBar');
+      if (progressBarEl) progressBarEl.style.width = `${progressPercent}%`;
+
+      // Update TOC active state
+      updateTocHighlight();
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function goToSlide(num) {
+      if (num >= 1 && num <= totalSlides) {
+        currentSlide = num;
+        updateSlide();
+        closeToc();
+      }
+    }
+
+    // Keyboard Navigation
+    window.addEventListener('keydown', (e) => {
+      // If modal is open, Escape closes it
+      if (e.key === 'Escape') {
+        closeZoom();
+        closeToc();
+        return;
+      }
+      
+      const zoomModal = document.getElementById('zoomModal');
+      const tocModal = document.getElementById('tocModal');
+      if (!zoomModal.classList.contains('hidden') || !tocModal.classList.contains('hidden')) {
+        return;
+      }
+
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        goToSlide(1);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        goToSlide(totalSlides);
+      } else if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        toggleToc();
+      }
+    });
+
+    // Table of Contents Drawer
+    function renderToc() {
+      const list = document.getElementById('tocList');
+      if (!list) return;
+      list.innerHTML = '';
+
+      let currentSection = '';
+      slidesData.forEach((item, index) => {
+        const slideIndex = index + 1;
+        const isActive = slideIndex === currentSlide;
+
+        // Render section heading if changed
+        if (item.section !== currentSection) {
+          currentSection = item.section;
+          const sectionHeader = document.createElement('div');
+          sectionHeader.className = 'pt-3 pb-1 first:pt-0';
+          sectionHeader.innerHTML = `
+            <div class="text-[11px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50/90 px-3 py-1.5 rounded-lg border border-blue-200/80 flex items-center justify-between">
+              <span>${currentSection}</span>
+            </div>
+          `;
+          list.appendChild(sectionHeader);
+        }
+
+        const btn = document.createElement('button');
+        btn.id = `toc-item-${slideIndex}`;
+        btn.className = `w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between transition ${
+          isActive
+            ? 'bg-blue-600 text-white font-bold shadow-sm'
+            : item.isSectionCover
+              ? 'text-slate-900 font-semibold bg-slate-100 hover:bg-slate-200'
+              : 'text-slate-700 hover:bg-slate-100 font-medium'
+        }`;
+        btn.innerHTML = `
+          <span class="truncate pr-2">${item.title}</span>
+          <span class="text-[11px] font-mono shrink-0 ${isActive ? 'text-blue-100 font-bold' : 'text-slate-400'}">Trang ${slideIndex}</span>
+        `;
+        btn.onclick = () => goToSlide(slideIndex);
+        list.appendChild(btn);
+      });
+
+      // Scroll active item into view
+      setTimeout(() => {
+        const activeItem = document.getElementById(`toc-item-${currentSlide}`);
+        if (activeItem) {
+          activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }, 50);
+    }
+
+    function updateTocHighlight() {
+      slidesData.forEach((item, index) => {
+        const slideIndex = index + 1;
+        const btn = document.getElementById(`toc-item-${slideIndex}`);
+        if (!btn) return;
+        const isActive = slideIndex === currentSlide;
+        btn.className = `w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between transition ${
+          isActive
+            ? 'bg-blue-600 text-white font-bold shadow-sm'
+            : item.isSectionCover
+              ? 'text-slate-900 font-semibold bg-slate-100 hover:bg-slate-200'
+              : 'text-slate-700 hover:bg-slate-100 font-medium'
+        }`;
+        const pageSpan = btn.querySelector('span:last-child');
+        if (pageSpan) {
+          pageSpan.className = `text-[11px] font-mono shrink-0 ${isActive ? 'text-blue-100 font-bold' : 'text-slate-400'}`;
+        }
+      });
+    }
+
+    function toggleToc() {
+      const modal = document.getElementById('tocModal');
+      if (modal.classList.contains('hidden')) {
+        renderToc();
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function closeToc() {
+      const modal = document.getElementById('tocModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // Zoom Lightbox
+    function openZoom(src, title) {
+      const modal = document.getElementById('zoomModal');
+      const img = document.getElementById('zoomImg');
+      const titleEl = document.getElementById('zoomTitle');
+      img.src = src;
+      titleEl.innerText = title || "Xem Chi Tiết Sơ Đồ";
+      modal.classList.remove('hidden');
+    }
+
+    function closeZoom() {
+      const modal = document.getElementById('zoomModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // Fullscreen Toggle
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.log(`Lỗi bật Fullscreen: ${err.message}`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    // Initial load
+    renderToc();
+    updateSlide();
+  </script>
+</body>
+</html>

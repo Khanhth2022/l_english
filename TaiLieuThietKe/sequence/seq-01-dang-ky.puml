@@ -1,0 +1,75 @@
+@startuml seq-01-dang-ky
+title Sequence Diagram — Tạo tài khoản (Đăng ký)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "AuthController" as CTRL
+participant "UserService" as SVC
+participant "UserRepository" as REPO
+database "Database" as DB
+
+User -> UI : Nhập username + password, bấm Đăng ký
+activate UI
+UI -> CTRL : POST /api/auth/register (RegisterForm)
+activate CTRL
+CTRL -> CTRL : Validate form\n(đủ trường, độ dài, định dạng)
+
+alt Thông tin không hợp lệ
+    CTRL --> UI : 400 "Thông tin không hợp lệ"
+    UI --> User : Hiển thị lỗi
+else Hợp lệ
+    CTRL -> SVC : register(form)
+    activate SVC
+    SVC -> REPO : existsByUsername(username)
+    activate REPO
+    REPO -> DB : JPA kiểm tra tồn tại theo username
+    DB --> REPO : có / không
+    REPO --> SVC : boolean
+    deactivate REPO
+
+    alt Username đã tồn tại
+        SVC --> CTRL : ném DuplicateUsernameException
+        CTRL --> UI : 409 "Tên đăng nhập đã tồn tại"
+        UI --> User : Hiển thị lỗi
+    else Chưa tồn tại
+        SVC -> SVC : Hash mật khẩu (BCrypt)
+        SVC -> REPO : save(User)
+        activate REPO
+        REPO -> DB : JPA ghi users (username, password)
+        DB --> REPO : id
+        REPO --> SVC : User đã lưu
+        deactivate REPO
+        SVC --> CTRL : thành công
+        deactivate SVC
+        CTRL --> UI : 201 "Tạo tài khoản thành công"
+        UI --> User : Thông báo thành công
+    end
+end
+deactivate CTRL
+deactivate UI
+
+note over SVC, DB
+  Mật khẩu KHÔNG lưu dạng plain text —
+  chỉ lưu BCrypt hash (60 ký tự).
+end note
+@enduml

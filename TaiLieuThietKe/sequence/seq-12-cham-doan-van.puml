@@ -1,0 +1,46 @@
+@startuml seq-12-cham-doan-van
+title Sequence Diagram — Chấm đoạn văn (AI, hàm nội bộ)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+participant "Bên gọi\n(PhraseService)" as CALLER
+participant "GradingService" as SVC
+participant "AI" as AI #FFF8E1
+
+CALLER -> SVC : gradePhrase(text)
+activate SVC
+SVC -> SVC : Validate đoạn văn\n(không rỗng, là đoạn văn tiếng Anh)
+
+alt Đoạn văn không hợp lệ
+    SVC --> CALLER : ném InvalidPhraseException\n("Đoạn văn gửi lên không hợp lệ")
+else Hợp lệ
+    SVC -> AI : Chấm đoạn văn (prompt + text)
+    activate AI
+    AI --> SVC : score (0..10), correctedText,\nincorrect, correction, explanation
+    deactivate AI
+    SVC --> CALLER : GradingResult\n{ score, correctedText, errors[] }
+end
+deactivate SVC
+
+note over SVC, AI
+  Hàm nội bộ, người dùng KHÔNG gọi trực tiếp —
+  chỉ được Thêm đoạn văn gọi qua <<include>> (seq-11),
+  vì score / correctedText / lỗi đều do AI sinh.
+  5 kết quả AI lưu thẳng: phrases.score, phrases.corrected_text,
+  grammar_errors.incorrect / .correction / .explanation.
+end note
+@enduml

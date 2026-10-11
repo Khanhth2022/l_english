@@ -48,4 +48,4 @@ app.*.map.json
 .widget_preview/
 
 # Tài liệu thiết kế (PlantUML nguồn + ảnh render PNG/SVG) — giữ ngoài git
-/tailieuthietke/
+

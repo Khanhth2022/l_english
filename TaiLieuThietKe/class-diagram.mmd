@@ -1,0 +1,127 @@
+---
+title: LEnglish — Class Diagram
+---
+classDiagram
+    direction LR
+
+    class Level {
+        <<enumeration>>
+        A1
+        A2
+        B1
+        B2
+        C1
+        C2
+    }
+
+    class PartOfSpeech {
+        <<enumeration>>
+        NOUN
+        VERB
+        ADJECTIVE
+        ADVERB
+        PREPOSITION
+        CONJUNCTION
+        PRONOUN
+        INTERJECTION
+    }
+
+    class User {
+        <<Entity>>
+        +Long id «PK, IDENTITY»
+        +String username «unique, not null»
+        +String password «BCrypt hash»
+        +List~Word~ words
+        +List~Phrase~ phrases
+        +List~RefreshToken~ refreshTokens
+    }
+
+    class Word {
+        <<Entity>>
+        +Long id «PK, IDENTITY»
+        +String english «not null, unique per user»
+        +Level level
+        +Integer reviewCount «SRS»
+        +LocalDateTime nextReview «SRS»
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +Long userId «FK -> users.id»
+        +List~WordValue~ values
+    }
+
+    class WordValue {
+        <<Entity>>
+        +Long id «PK, IDENTITY»
+        +String vietnamese «nghĩa tiếng Việt»
+        +String example «câu ví dụ»
+        +String exampleTranslation «dịch câu ví dụ»
+        +String pronunciation «phiên âm IPA»
+        +PartOfSpeech partOfSpeech «@Enumerated STRING»
+        +Long wordId «FK -> words.id»
+    }
+
+    class WordCache {
+        <<Entity>>
+        +Long id «PK, IDENTITY»
+        +String english «unique»
+        +Level level
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +List~WordCacheValue~ values
+    }
+
+    class WordCacheValue {
+        <<Entity>>
+        +Long id «PK, IDENTITY»
+        +String vietnamese «nghĩa tiếng Việt»
+        +String example «câu ví dụ»
+        +String exampleTranslation «dịch câu ví dụ»
+        +String pronunciation «phiên âm IPA»
+        +PartOfSpeech partOfSpeech «@Enumerated STRING»
+        +Long wordCacheId «FK -> word_cache.id»
+    }
+
+    class Phrase {
+        <<Entity>>
+        +Long id «PK, IDENTITY»
+        +String text
+        +String correctedText
+        +Integer score «0..10»
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +Long userId «FK -> users.id»
+        +List~GrammarError~ grammarErrors
+    }
+
+    class GrammarError {
+        <<Entity>>
+        +Long id «PK, IDENTITY»
+        +String incorrect
+        +String correction
+        +String explanation «tiếng Việt»
+        +Long phraseId «FK -> phrases.id»
+    }
+
+    class RefreshToken {
+        <<Entity>>
+        +Long id «PK, IDENTITY»
+        +String token «unique, not null»
+        +LocalDateTime expiryDate «not null»
+        +LocalDateTime createdAt
+        +Long userId «FK -> users.id, not null»
+    }
+
+    User "1" --> "0..*" Word : owns
+    User "1" --> "0..*" Phrase : owns
+    User "1" --> "0..*" RefreshToken : owns
+    Phrase "1" *-- "0..*" GrammarError : contains
+    Word "1" *-- "0..*" WordValue : contains
+    WordCache "1" *-- "0..*" WordCacheValue : contains
+    Word ..> Level : level
+    WordCache ..> Level : level
+    WordValue ..> PartOfSpeech : partOfSpeech
+    WordCacheValue ..> PartOfSpeech : partOfSpeech
+
+    note for WordCache "Giống hệt Word nhưng KHÔNG có FK tới User.\nDùng chung cho mọi user (cache)."
+    note for WordValue "Chuẩn hoá 1NF: 5 thuộc tính đa trị tách thành 5 cột riêng\n(vietnamese, example, exampleTranslation, pronunciation, partOfSpeech)."
+    note for Phrase "score: CHECK (score BETWEEN 0 AND 10).\nXóa Phrase -> xóa hết GrammarError (cascade, orphanRemoval)."

@@ -1,0 +1,84 @@
+@startuml seq-19-xac-nhan-on-tap
+title Sequence Diagram — Xác nhận ôn tập (cập nhật SRS)
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "JwtFilter\n«config»" as JWT
+participant "WordController" as CTRL
+participant "WordService" as SVC
+participant "WordRepository" as REPO
+database "Database" as DB
+
+User -> UI : Chọn các từ đã ôn → bấm "Xác nhận ôn tập"
+activate UI
+UI -> JWT : POST /api/words/review  { wordIds: [...] }  (Bearer <token>)
+activate JWT
+JWT -> JWT : Xác thực JWT (chữ ký, hạn dùng)
+
+alt Token không hợp lệ / hết hạn
+    JWT --> UI : 401 "Token không hợp lệ hoặc hết hạn"
+    UI --> User : Yêu cầu đăng nhập lại
+else Token hợp lệ
+    JWT -> CTRL : Chuyển tiếp request (đính kèm userId)
+    deactivate JWT
+    activate CTRL
+    CTRL -> SVC : confirmReview(userId, wordIds)
+    activate SVC
+    SVC -> REPO : findByIdInAndUserId(wordIds, userId)
+    activate REPO
+    REPO -> DB : JPA đọc words theo id IN (...) AND user_id
+    DB --> REPO : List<Word>
+    REPO --> SVC : List<Word>
+    deactivate REPO
+
+    alt Có wordId không thuộc user
+        SVC --> CTRL : ném lỗi sở hữu
+        CTRL --> UI : 403 "Không có quyền với từ không thuộc sở hữu"
+        UI --> User : Báo lỗi
+    else Tất cả hợp lệ
+        loop mỗi Word đã ôn
+            SVC -> SVC : reviewCount += 1
+            SVC -> SVC : interval = scheduleFor(reviewCount)\n(giãn dần theo số lần ôn)
+            SVC -> SVC : nextReview = now() + interval
+        end
+        SVC -> REPO : saveAll(words)
+        activate REPO
+        REPO -> DB : JPA cập nhật words\n(review_count, next_review, updated_at) theo id
+        DB --> REPO : OK
+        REPO --> SVC : List<Word> (đã lưu)
+        deactivate REPO
+        SVC --> CTRL : số từ đã xác nhận
+        deactivate SVC
+        CTRL --> UI : 200 + kết quả
+        deactivate CTRL
+        UI --> User : Cập nhật danh sách ôn (bớt các từ vừa ôn)
+    end
+end
+deactivate UI
+
+note over SVC, DB
+  SRS: mỗi lần xác nhận, review_count tăng 1 và
+  next_review giãn dần theo review_count
+  (spaced repetition). Chỉ cập nhật từ thuộc user.
+end note
+@enduml

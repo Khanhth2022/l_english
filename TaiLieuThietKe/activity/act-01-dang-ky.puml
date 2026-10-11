@@ -1,0 +1,30 @@
+@startuml act-01-dang-ky
+title Tạo tài khoản
+skinparam backgroundColor #FFFFFF
+skinparam ActivityBackgroundColor #F4F6F7
+skinparam ActivityBorderColor #546E7A
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F9A825
+skinparam ArrowColor #37474F
+
+start
+:Người dùng gửi username + password;
+:Validate thông tin
+(đủ trường, độ dài, định dạng);
+if (Thông tin hợp lệ?) then (không)
+  #FFEBEE:Trả lỗi 400
+  "Thông tin không hợp lệ";
+else (có)
+  :Kiểm tra username
+  đã tồn tại trong database?;
+  if (Username đã tồn tại?) then (có)
+    #FFEBEE:Trả lỗi 409
+    "Tên đăng nhập đã tồn tại";
+  else (không)
+    :Hash mật khẩu bằng BCrypt;
+    :Lưu User vào database;
+    :Trả "Tạo tài khoản thành công";
+  endif
+endif
+stop
+@enduml

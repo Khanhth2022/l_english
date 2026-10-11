@@ -1,0 +1,61 @@
+@startuml seq-10-xem-doan-van
+title Sequence Diagram — Xem đoạn văn
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 240
+skinparam ParticipantPadding 18
+skinparam sequenceArrowThickness 1.1
+skinparam ActorBackgroundColor #E3F2FD
+skinparam ActorBorderColor #1565C0
+skinparam ParticipantBackgroundColor #E3F2FD
+skinparam ParticipantBorderColor #1565C0
+skinparam DatabaseBackgroundColor #E8F5E9
+skinparam DatabaseBorderColor #2E7D32
+skinparam SequenceLifeLineBorderColor #B0BEC5
+skinparam SequenceGroupBorderColor #90A4AE
+skinparam SequenceGroupBackgroundColor #FAFAFA
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #F9A825
+
+autonumber
+
+actor "Người dùng" as User
+participant "Giao diện\n(Client)" as UI
+participant "JwtFilter\n«config»" as JWT
+participant "PhraseController" as CTRL
+participant "PhraseService" as SVC
+participant "PhraseRepository" as REPO
+database "Database" as DB
+
+User -> UI : Mở màn hình danh sách đoạn văn
+activate UI
+UI -> JWT : GET /api/phrases + token
+activate JWT
+JWT -> JWT : Xác thực JWT
+
+alt Token không hợp lệ / hết hạn
+    JWT --> UI : 401 "Token không hợp lệ hoặc hết hạn"
+    UI --> User : Yêu cầu đăng nhập lại
+else Token hợp lệ
+    JWT -> CTRL : Chuyển tiếp (userId)
+    deactivate JWT
+    activate CTRL
+    CTRL -> SVC : getPhrases(userId)
+    activate SVC
+    SVC -> REPO : findByUserId(userId)
+    activate REPO
+    REPO -> DB : JPA đọc phrases theo user_id\n(kèm grammar_errors)
+    DB --> REPO : List<Phrase> + GrammarError
+    REPO --> SVC : List<Phrase>
+    deactivate REPO
+    SVC -> SVC : Map → PhraseDto (text, correctedText, score, errors)
+    SVC --> CTRL : List<PhraseDto>
+    deactivate SVC
+    CTRL --> UI : 200 + đoạn văn + điểm
+    deactivate CTRL
+    UI --> User : Hiển thị đoạn văn, điểm, lỗi
+end
+deactivate UI
+@enduml
