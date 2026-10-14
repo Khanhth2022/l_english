@@ -50,6 +50,7 @@ void main() async {
       authApi: authApi,
       wordApi: wordApi,
       phraseApi: phraseApi,
+      dio: apiClient,
     ),
   );
 }

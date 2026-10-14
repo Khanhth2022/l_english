@@ -1,6 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../state/auth_controller.dart';
 
@@ -44,6 +46,17 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     final authController = context.watch<AuthController>();
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Cấu hình Base URL',
+            icon: const Icon(Icons.tune_rounded, color: AppTheme.textMuted),
+            onPressed: () => _showBaseUrlDialog(context),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -217,6 +230,53 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                     style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.textMuted.withValues(alpha: 0.8),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  InkWell(
+                    onTap: () => _showBaseUrlDialog(context),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppTheme.borderLight),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.successGreen,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'Máy chủ: ${AppConfig.apiBaseUrl}',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.edit_outlined, size: 14, color: AppTheme.primaryBlue),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -396,5 +456,101 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       _loginUsernameController.text = username;
       _loginPasswordController.text = password;
     }
+  }
+
+  void _showBaseUrlDialog(BuildContext context) {
+    final dio = Provider.of<Dio?>(context, listen: false);
+    final urlController = TextEditingController(text: AppConfig.apiBaseUrl);
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlue.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.dns_rounded, color: AppTheme.primaryBlue, size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Cấu hình Base URL',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Nhập địa chỉ máy chủ backend Spring Boot (Cloudflare tunnel hoặc IP máy tính trong mạng LAN):',
+              style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: urlController,
+              autofocus: true,
+              keyboardType: TextInputType.url,
+              decoration: InputDecoration(
+                labelText: 'Backend Base URL',
+                hintText: 'https://...trycloudflare.com',
+                prefixIcon: const Icon(Icons.link_rounded),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: urlController.clear,
+                ),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () {
+                urlController.text = AppConfig.defaultApiBaseUrl;
+              },
+              icon: const Icon(Icons.restore_rounded, size: 16),
+              label: const Text('Đặt lại mặc định', style: TextStyle(fontSize: 12.5)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final newUrl = urlController.text.trim();
+              if (newUrl.isEmpty ||
+                  (!newUrl.startsWith('http://') && !newUrl.startsWith('https://'))) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('URL phải bắt đầu bằng http:// hoặc https://'),
+                    backgroundColor: AppTheme.errorRed,
+                  ),
+                );
+                return;
+              }
+              AppConfig.setApiBaseUrl(newUrl, dio);
+              Navigator.of(ctx).pop();
+              setState(() {});
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Đã cập nhật máy chủ: $newUrl'),
+                  backgroundColor: AppTheme.successGreen,
+                ),
+              );
+            },
+            child: const Text('Lưu & Áp dụng'),
+          ),
+        ],
+      ),
+    );
   }
 }

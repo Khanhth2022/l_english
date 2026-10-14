@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -22,12 +23,14 @@ class LEnglishApp extends StatelessWidget {
     required this.wordApi,
     this.authApi,
     this.phraseApi,
+    this.dio,
   });
 
   final TokenStore tokenStore;
   final WordApi wordApi;
   final AuthApi? authApi;
   final PhraseApi? phraseApi;
+  final Dio? dio;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +39,7 @@ class LEnglishApp extends StatelessWidget {
 
     return MultiProvider(
       providers: [
+        Provider<Dio?>.value(value: dio),
         ChangeNotifierProvider<TokenStore>.value(value: tokenStore),
         Provider<WordApi>.value(value: wordApi),
         Provider<AuthApi>.value(value: effectiveAuthApi),

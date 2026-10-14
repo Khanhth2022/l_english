@@ -1,21 +1,37 @@
-/// Cấu hình lúc chạy, đọc từ biến biên dịch (`--dart-define`) để đổi môi trường
-/// mà không phải sửa code.
-///
-/// Ví dụ chạy với backend thật trên máy trong cùng wifi:
-/// ```
-/// flutter run --dart-define=USE_MOCK_API=false \
-///             --dart-define=API_BASE_URL=http://192.168.1.10:8080
-/// ```
-class AppConfig {
-  const AppConfig._();
+import 'package:dio/dio.dart';
 
-  /// Địa chỉ backend Spring Boot.
-  ///
-  /// Mặc định trỏ đến Cloudflare tunnel backend hoặc có thể ghi đè qua `--dart-define=API_BASE_URL=...`
-  static const String apiBaseUrl = String.fromEnvironment(
+import '../network/auth_interceptor.dart';
+
+/// Cấu hình lúc chạy, đọc từ biến biên dịch (`--dart-define`) để đổi môi trường
+/// mà không phải sửa code, hỗ trợ chỉnh động trong ứng dụng.
+class AppConfig {
+  AppConfig._();
+
+  /// Địa chỉ backend Spring Boot mặc định biên dịch.
+  static const String defaultApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://lightweight-drawn-delayed-loves.trycloudflare.com',
   );
+
+  /// Địa chỉ backend Spring Boot đang được sử dụng trong phiên làm việc.
+  static String apiBaseUrl = defaultApiBaseUrl;
+
+  /// Cập nhật Base URL trong runtime và đồng bộ vào Dio client.
+  static void setApiBaseUrl(String newUrl, [Dio? dio]) {
+    var formatted = newUrl.trim();
+    if (formatted.endsWith('/')) {
+      formatted = formatted.substring(0, formatted.length - 1);
+    }
+    apiBaseUrl = formatted;
+    if (dio != null) {
+      dio.options.baseUrl = formatted;
+      for (final interceptor in dio.interceptors) {
+        if (interceptor is AuthInterceptor) {
+          interceptor.refreshClient.options.baseUrl = formatted;
+        }
+      }
+    }
+  }
 
   /// Bật/tắt API giả lập.
   /// Mặc định dùng backend thật. Có thể bật lại bằng `--dart-define=USE_MOCK_API=true`.
