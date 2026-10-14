@@ -164,19 +164,21 @@ void main() {
       final first = await api.generateMeaning('resilient');
       expect(api.aiCallCount, 1);
       expect(api.lastGenerateFromCache, isFalse);
-      expect(first.first.vietnamese, 'kiên cường, mau hồi phục');
-      expect(first.first.partOfSpeech, PartOfSpeech.adjective);
+      expect(first.level, Level.b2);
+      expect(first.values.first.vietnamese, 'kiên cường, mau hồi phục');
+      expect(first.values.first.partOfSpeech, PartOfSpeech.adjective);
 
       final second = await api.generateMeaning('Resilient ');
       expect(api.aiCallCount, 1, reason: 'cache trúng thì không gọi AI');
       expect(api.lastGenerateFromCache, isTrue);
-      expect(second.length, first.length);
+      expect(second.level, Level.b2);
+      expect(second.values.length, first.values.length);
     });
 
     test('từ lạ vẫn sinh được nghĩa', () async {
-      final values = await api.generateMeaning('zigzag');
-      expect(values, isNotEmpty);
-      expect(values.first.vietnamese, contains('zigzag'));
+      final generated = await api.generateMeaning('zigzag');
+      expect(generated.values, isNotEmpty);
+      expect(generated.values.first.vietnamese, contains('zigzag'));
     });
 
     test('dịch vụ AI lỗi thì trả 502', () async {

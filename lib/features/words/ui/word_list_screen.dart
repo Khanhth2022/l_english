@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/ui/status_views.dart';
 import '../data/models/word.dart';
 import '../data/word_api.dart';
@@ -16,6 +17,17 @@ class WordListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WordListController? existing;
+    try {
+      existing = Provider.of<WordListController>(context, listen: false);
+    } catch (_) {
+      existing = null;
+    }
+
+    if (existing != null) {
+      return const _WordListView();
+    }
+
     return ChangeNotifierProvider(
       create: (ctx) =>
           WordListController(ctx.read<WordApi>())..load(),
@@ -50,6 +62,20 @@ class _WordListViewState extends State<_WordListView>
     context.read<WordListController>().setOnlyDue(_tabs.index == 1);
   }
 
+  Future<void> _openTopicWords(
+    BuildContext context,
+    WordListController controller,
+  ) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const TopicWordsScreen(),
+      ),
+    );
+    if (changed == true && mounted) {
+      await controller.load();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<WordListController>();
@@ -67,24 +93,14 @@ class _WordListViewState extends State<_WordListView>
           ),
           IconButton(
             tooltip: 'Thêm từ theo chủ đề (AI)',
-            icon: const Icon(Icons.auto_awesome, color: Color(0xFF7C3AED)),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const TopicWordsScreen(),
-                ),
-              );
-            },
+            icon: const Icon(Icons.auto_awesome, color: AppTheme.aiPurple),
+            onPressed: () => _openTopicWords(context, controller),
           ),
           PopupMenuButton<String>(
             tooltip: 'Khác',
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'topic') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const TopicWordsScreen(),
-                  ),
-                );
+                await _openTopicWords(context, controller);
               } else if (value == 'settings') {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -116,20 +132,31 @@ class _WordListViewState extends State<_WordListView>
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
             child: TextField(
               controller: _searchController,
               onChanged: controller.setQuery,
               decoration: InputDecoration(
                 isDense: true,
                 hintText: 'Tìm theo từ tiếng Anh hoặc nghĩa tiếng Việt',
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppTheme.borderLight),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppTheme.borderLight),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.8),
+                ),
                 suffixIcon: controller.query.isEmpty
                     ? null
                     : IconButton(
                         tooltip: 'Xoá tìm kiếm',
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, size: 20),
                         onPressed: () {
                           _searchController.clear();
                           controller.setQuery('');
@@ -138,6 +165,64 @@ class _WordListViewState extends State<_WordListView>
               ),
             ),
           ),
+          if (controller.onlyDue && controller.dueCount > 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Đã chọn ${controller.selectedCount}/${controller.dueCount}',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () {
+                      final allSelected =
+                          controller.selectedCount == controller.visibleWords.length;
+                      for (final word in controller.visibleWords) {
+                        final isSel = controller.isSelected(word.id);
+                        if (allSelected && isSel) {
+                          controller.toggleSelected(word.id);
+                        } else if (!allSelected && !isSel) {
+                          controller.toggleSelected(word.id);
+                        }
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            controller.selectedCount == controller.visibleWords.length
+                                ? Icons.deselect_rounded
+                                : Icons.select_all_rounded,
+                            size: 15,
+                            color: AppTheme.primaryBlue,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            controller.selectedCount == controller.visibleWords.length
+                                ? 'Bỏ chọn'
+                                : 'Chọn tất cả',
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(child: _buildContent(context, controller)),
         ],
       ),

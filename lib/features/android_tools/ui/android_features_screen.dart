@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../phrases/ui/phrase_form_screen.dart';
 import '../../words/data/word_api.dart';
+import '../../words/state/word_list_controller.dart';
 import '../../words/ui/word_form_screen.dart';
 
 /// Màn hình tương tác và mô phỏng 4 tính năng tích hợp hệ điều hành Android (act-14..17).
@@ -17,21 +18,6 @@ class AndroidFeaturesScreen extends StatefulWidget {
 class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
   bool _notificationEnabled = true;
   TimeOfDay _notificationTime = const TimeOfDay(hour: 20, minute: 0);
-
-  static const List<Map<String, String>> _ocrSamples = [
-    {
-      'title': 'Đoạn trích từ bài tập IELTS',
-      'text': 'Although online learning provides great flexibility, but students often face difficulties with self-discipline.',
-    },
-    {
-      'title': 'Đoạn trích tin tức môi trường',
-      'text': 'Renewable energy has become more cheaper than fossil fuels in many developing countries.',
-    },
-    {
-      'title': 'Ghi chú tiếng Anh công sở',
-      'text': 'We look forward to hear your feedback regarding the quarterly business proposal.',
-    },
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -98,9 +84,15 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
             title: 'Quét OCR lấy văn bản (act-17)',
             description: 'Sử dụng ML Kit OCR on-device để trích xuất văn bản tiếng Anh từ ảnh/tài liệu và đưa thẳng vào ô Chấm đoạn văn.',
             action: ElevatedButton.icon(
-              onPressed: () => _showOcrScanner(context),
-              icon: const Icon(Icons.camera_alt_outlined, size: 18),
-              label: const Text('Thử nghiệm Quét OCR'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PhraseFormScreen(autoScan: true),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.document_scanner_rounded, size: 18),
+              label: const Text('Quét ảnh vào ô Chấm bài'),
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.aiPurple),
             ),
           ),
@@ -204,10 +196,15 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
             title: 'Thêm từ từ bộ chọn văn bản (act-16)',
             description: 'Bôi đen bất kỳ từ tiếng Anh nào trên trình duyệt hay ứng dụng khác, chọn menu "LEnglish" để mở màn hình Thêm từ và tự động gọi AI sinh nghĩa.',
             action: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
+              onPressed: () async {
+                final changed = await Navigator.of(context).push<bool>(
                   MaterialPageRoute(builder: (_) => const WordFormScreen()),
                 );
+                if (changed == true && context.mounted) {
+                  try {
+                    await context.read<WordListController>().load();
+                  } catch (_) {}
+                }
               },
               icon: const Icon(Icons.open_in_new, size: 16),
               label: const Text('Thử mở màn Thêm từ'),
@@ -271,51 +268,4 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
     );
   }
 
-  void _showOcrScanner(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Trích xuất văn bản (Mô phỏng OCR ML Kit)',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Chọn mẫu văn bản tiếng Anh để giả lập quét ảnh thành chữ và chuyển sang chấm bài:',
-              style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
-            ),
-            const SizedBox(height: 16),
-            ..._ocrSamples.map((sample) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  leading: const Icon(Icons.document_scanner, color: AppTheme.aiPurple),
-                  title: Text(sample['title']!, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
-                  subtitle: Text(sample['text']!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5)),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const PhraseFormScreen(),
-                      ),
-                    );
-                  },
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
 }

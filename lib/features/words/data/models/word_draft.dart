@@ -25,9 +25,9 @@ class WordDraft {
     values: asMapList(json['values']).map(WordValue.fromJson).toList(),
   );
 
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson({bool includeId = false}) => {
     'english': english,
     'level': level?.wire,
-    'values': values.map((value) => value.toJson()).toList(),
+    'values': values.map((value) => value.toJson(includeId: includeId)).toList(),
   };
 }

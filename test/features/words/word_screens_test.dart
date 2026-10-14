@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:l_english/features/words/data/mock_word_api.dart';
+import 'package:l_english/features/words/data/models/enums.dart';
 import 'package:l_english/features/words/data/models/word.dart';
 import 'package:l_english/features/words/data/word_api.dart';
 import 'package:l_english/features/words/ui/word_form_screen.dart';
@@ -135,6 +136,26 @@ void main() {
       expect(find.text('Gợi ý nghĩa bằng AI'), findsOneWidget);
       expect(find.text('Nghĩa của từ'), findsOneWidget);
     });
+
+    testWidgets('thêm từ mới thành công tự động refresh danh sách từ', (tester) async {
+      final api = MockWordApi(latency: Duration.zero);
+      await pumpScreen(tester, const WordListScreen(), api);
+
+      expect(find.text('resilient'), findsNothing);
+
+      await tester.tap(find.widgetWithText(FloatingActionButton, 'Thêm từ'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'resilient');
+      await tester.tap(find.text('Gợi ý nghĩa bằng AI'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Thêm vào sổ từ'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sổ từ của tôi'), findsOneWidget);
+      expect(find.text('resilient'), findsOneWidget);
+    });
   });
 
   group('WordFormScreen', () {
@@ -157,7 +178,8 @@ void main() {
 
       expect(find.text('Mở form'), findsOneWidget, reason: 'lưu xong thì quay lại');
       final words = await api.fetchWords();
-      expect(words.any((word) => word.english == 'resilient'), isTrue);
+      final resilient = words.firstWhere((word) => word.english == 'resilient');
+      expect(resilient.level, Level.b2);
     });
 
     testWidgets('form Sửa từ nạp sẵn dữ liệu cũ', (tester) async {

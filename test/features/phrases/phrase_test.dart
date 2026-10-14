@@ -1,7 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:l_english/features/phrases/data/mock_phrase_api.dart';
+import 'package:l_english/features/phrases/data/phrase_api.dart';
 import 'package:l_english/features/phrases/state/phrase_form_controller.dart';
 import 'package:l_english/features/phrases/state/phrase_list_controller.dart';
+import 'package:l_english/features/phrases/ui/phrase_form_screen.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   group('Phrase Module (act-10, act-11, act-12, act-13)', () {
@@ -69,6 +73,38 @@ void main() {
       expect(() => formController.notifyListeners(), returnsNormally);
       final result = await formController.submitForGrading();
       expect(result, isNotNull);
+    });
+
+    testWidgets('PhraseFormScreen hiển thị nút Quét ảnh (OCR) theo act-17', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Provider<PhraseApi>.value(
+            value: api,
+            child: const PhraseFormScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chấm đoạn văn bằng AI'), findsOneWidget);
+      expect(find.text('Quét ảnh (OCR)'), findsOneWidget);
+      expect(find.byIcon(Icons.document_scanner_rounded), findsWidgets);
+    });
+
+    testWidgets('PhraseFormScreen hỗ trợ initialText từ tính năng quét OCR hoặc bôi đen', (tester) async {
+      const scannedText = 'Although online learning provides great flexibility, students face difficulties.';
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Provider<PhraseApi>.value(
+            value: api,
+            child: const PhraseFormScreen(initialText: scannedText),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(scannedText), findsOneWidget);
+      expect(find.text('${scannedText.length} ký tự'), findsOneWidget);
     });
   });
 }

@@ -5,7 +5,6 @@ import '../../../core/network/api_exception.dart';
 import 'json_utils.dart';
 import 'models/word.dart';
 import 'models/word_draft.dart';
-import 'models/word_value.dart';
 import 'word_api.dart';
 
 /// Gọi backend Spring Boot thật.
@@ -57,7 +56,7 @@ class RemoteWordApi implements WordApi {
   Future<Word> updateWord(int id, WordDraft draft) => _call(() async {
     final response = await _dio.put<Object?>(
       '$_basePath/$id',
-      data: draft.toJson(),
+      data: draft.toJson(includeId: true),
     );
     final data = response.data;
     final wordMap = data is Map ? (data['data'] is Map ? data['data'] : data) : null;
@@ -70,21 +69,17 @@ class RemoteWordApi implements WordApi {
   });
 
   @override
-  Future<List<WordValue>> generateMeaning(String english) => _call(() async {
+  Future<WordDraft> generateMeaning(String english) => _call(() async {
     final response = await _dio.get<Object?>(
       '$_basePath/generate',
       queryParameters: {'english': english},
     );
     final data = response.data;
-    final list = data is List
-        ? data
-        : data is Map
-        ? (data['values'] ?? data['data'])
-        : null;
-    if (list is! List) {
-      throw ApiException(0, 'Máy chủ không trả về danh sách nghĩa của từ.');
+    final map = data is Map ? (data['data'] is Map ? data['data'] : data) : null;
+    if (map is Map) {
+      return WordDraft.fromJson(Map<String, dynamic>.from(map));
     }
-    return asMapList(list).map(WordValue.fromJson).toList();
+    throw ApiException(0, 'Máy chủ không trả về thông tin từ được sinh.');
   });
 
   @override

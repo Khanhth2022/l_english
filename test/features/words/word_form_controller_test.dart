@@ -31,7 +31,7 @@ class _RecordingWordApi implements WordApi {
   Future<void> deleteWord(int id) async {}
 
   @override
-  Future<List<WordValue>> generateMeaning(String english) async =>
+  Future<WordDraft> generateMeaning(String english) async =>
       throw ApiException(502, 'Dịch vụ AI không phản hồi, vui lòng thử lại.');
 
   @override
@@ -87,6 +87,7 @@ void main() {
 
     expect(error, isNull);
     expect(controller.generating, isFalse);
+    expect(controller.level, Level.b2);
     expect(controller.rows.length, 2);
     expect(controller.rows.first.vietnameseController.text, 'kiên cường, mau hồi phục');
     expect(controller.notice, 'Đã điền 2 nghĩa cho "resilient".');

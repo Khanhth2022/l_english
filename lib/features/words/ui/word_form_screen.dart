@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../data/models/enums.dart';
 import '../data/models/word.dart';
 import '../data/word_api.dart';
 import '../state/word_form_controller.dart';
+import '../state/word_list_controller.dart';
 import 'widgets/word_value_editor.dart';
 
 /// Màn hình Thêm từ / Sửa từ.
@@ -32,7 +34,6 @@ class _WordFormView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<WordFormController>();
-    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -65,6 +66,7 @@ class _WordFormView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<Level>(
+              key: ValueKey(controller.level),
               initialValue: controller.level,
               decoration: const InputDecoration(
                 labelText: 'Trình độ (CEFR)',
@@ -77,10 +79,14 @@ class _WordFormView extends StatelessWidget {
               ],
               onChanged: controller.setLevel,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             Align(
               alignment: Alignment.centerLeft,
               child: FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.aiBg,
+                  foregroundColor: AppTheme.aiPurple,
+                ),
                 onPressed: controller.generating
                     ? null
                     : () => _generate(context),
@@ -88,7 +94,10 @@ class _WordFormView extends StatelessWidget {
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.aiPurple,
+                        ),
                       )
                     : const Icon(Icons.auto_awesome),
                 label: Text(
@@ -97,21 +106,42 @@ class _WordFormView extends StatelessWidget {
               ),
             ),
             if (controller.notice != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                controller.notice!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.primary,
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.aiPurple.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 16, color: AppTheme.aiPurple),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        controller.notice!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.aiPurple,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
             const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(
+                const Expanded(
                   child: Text(
                     'Nghĩa của từ',
-                    style: theme.textTheme.titleMedium,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -156,6 +186,9 @@ class _WordFormView extends StatelessWidget {
       _showMessage(context, error, isError: true);
       return;
     }
+    try {
+      context.read<WordListController>().load();
+    } catch (_) {}
     Navigator.of(context).pop(true);
   }
 

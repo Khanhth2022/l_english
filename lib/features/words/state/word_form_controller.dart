@@ -129,15 +129,18 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
     notice = null;
     notifyListeners();
     try {
-      final values = await api.generateMeaning(english);
-      if (values.isEmpty) {
+      final generated = await api.generateMeaning(english);
+      if (generated.values.isEmpty) {
         return 'Không sinh được nghĩa nào cho "$english".';
+      }
+      if (generated.level != null) {
+        level = generated.level;
       }
       for (final row in rows) {
         row.dispose();
       }
-      rows = values.map(WordValueRow.fromValue).toList();
-      notice = 'Đã điền ${values.length} nghĩa cho "$english".';
+      rows = generated.values.map(WordValueRow.fromValue).toList();
+      notice = 'Đã điền ${generated.values.length} nghĩa cho "$english".';
       return null;
     } on ApiException catch (error) {
       return error.message;

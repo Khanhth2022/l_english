@@ -59,6 +59,24 @@ class ApiException implements Exception {
 
   static String? _messageFromBody(Object? body) {
     if (body is Map) {
+      if (body['details'] is List && (body['details'] as List).isNotEmpty) {
+        final details = body['details'] as List;
+        final messages = <String>[];
+        for (final item in details) {
+          if (item is Map && item['message'] is String) {
+            final field = item['field'];
+            final msg = (item['message'] as String).trim();
+            if (field is String && field.trim().isNotEmpty) {
+              messages.add('$field: $msg');
+            } else if (msg.isNotEmpty) {
+              messages.add(msg);
+            }
+          }
+        }
+        if (messages.isNotEmpty) {
+          return messages.join('\n');
+        }
+      }
       for (final key in const ['message', 'error', 'detail', 'title']) {
         final value = body[key];
         if (value is String && value.trim().isNotEmpty) {

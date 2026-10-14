@@ -3,7 +3,6 @@ import 'package:l_english/core/network/api_exception.dart';
 import 'package:l_english/features/words/data/mock_word_api.dart';
 import 'package:l_english/features/words/data/models/word.dart';
 import 'package:l_english/features/words/data/models/word_draft.dart';
-import 'package:l_english/features/words/data/models/word_value.dart';
 import 'package:l_english/features/words/data/word_api.dart';
 import 'package:l_english/features/words/state/word_list_controller.dart';
 
@@ -25,7 +24,7 @@ class _FailingWordApi implements WordApi {
       throw ApiException(403, 'Không tìm thấy từ này trong sổ từ của bạn.');
 
   @override
-  Future<List<WordValue>> generateMeaning(String english) async =>
+  Future<WordDraft> generateMeaning(String english) async =>
       throw UnimplementedError();
 
   @override

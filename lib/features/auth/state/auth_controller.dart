@@ -33,8 +33,6 @@ class AuthController extends ChangeNotifier with SafeChangeNotifier {
         ),
         username: username.trim(),
       );
-      isLoading = false;
-      notifyListeners();
       return true;
     } on ApiException catch (error) {
       errorMessage = error.message;
@@ -56,8 +54,6 @@ class AuthController extends ChangeNotifier with SafeChangeNotifier {
     try {
       final message = await api.register(username, password);
       successMessage = message;
-      isLoading = false;
-      notifyListeners();
       return true;
     } on ApiException catch (error) {
       errorMessage = error.message;

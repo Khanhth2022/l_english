@@ -1,6 +1,5 @@
 import 'models/word.dart';
 import 'models/word_draft.dart';
-import 'models/word_value.dart';
 
 /// Hợp đồng dữ liệu của chức năng Quản lý từ, bám theo tài liệu thiết kế:
 ///
@@ -28,8 +27,8 @@ abstract class WordApi {
 
   Future<void> deleteWord(int id);
 
-  /// Nhờ AI sinh nghĩa cho [english]; backend tra `word_cache` trước khi gọi AI.
-  Future<List<WordValue>> generateMeaning(String english);
+  /// Nhờ AI sinh nghĩa và trình độ CEFR cho [english]; backend tra `word_cache` trước khi gọi AI.
+  Future<WordDraft> generateMeaning(String english);
 
   /// Ghi nhận đã ôn các từ trong [wordIds] (backend cập nhật `review_count`,
   /// `next_review` theo giãn cách 1, 2, 4, 7, 15, 30… ngày).

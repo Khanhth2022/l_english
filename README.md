@@ -106,7 +106,7 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
    * Không lưu dạng JSON chuỗi hay gộp dòng. Bảng `word_values` có 5 trường độc lập: `vietnamese` (bắt buộc), `example`, `exampleTranslation`, `pronunciation`, `partOfSpeech`.
    * Enum `PartOfSpeech` (8 từ loại) trong Dart đã ánh xạ tương thích cả chữ HOA Jackson gửi (`NOUN`) lẫn chữ thường MySQL lưu (`noun`).
 2. **Xác thực tự động (Self-healing Token Rotation):**
-   * Mọi request (trừ nhóm `/api/auth/*`) đều đi qua [`AuthInterceptor`](file:///c:/Users/dell/Documents/PTUD/l_english/lib/core/network/auth_interceptor.dart), tự động gắn `Authorization: Bearer <accessToken>`.
+   * Mọi request (trừ nhóm `/api/auth/*`) đều đi qua [`AuthInterceptor`](lib/core/network/auth_interceptor.dart), tự động gắn `Authorization: Bearer <accessToken>`.
    * Khi gặp lỗi `401`, interceptor sử dụng cơ chế *single-flight lock* để gọi `POST /api/auth/refresh` duy nhất 1 lần, cập nhật token mới và retry request hỏng mà không gây xung đột xoay vòng token.
 3. **Mã trạng thái HTTP thống nhất:**
    * `400`: Lỗi dữ liệu đầu vào (từ không phải tiếng Anh, đoạn văn < 10 ký tự, chủ đề vô nghĩa).
@@ -115,7 +115,7 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
    * `409`: Vi phạm ràng buộc duy nhất (trùng username hoặc trùng từ `(user_id, english)`).
    * `502`: Dịch vụ AI bên ngoài bị lỗi hoặc timeout.
 4. **Chế độ phát triển linh hoạt (Dual Mode):**
-   * **Chế độ Mock (Mặc định):** [`MockWordApi`](file:///c:/Users/dell/Documents/PTUD/l_english/lib/features/words/data/mock_word_api.dart), [`MockAuthApi`](file:///c:/Users/dell/Documents/PTUD/l_english/lib/features/auth/data/mock_auth_api.dart), [`MockPhraseApi`](file:///c:/Users/dell/Documents/PTUD/l_english/lib/features/phrases/data/mock_phrase_api.dart) chạy hoàn toàn trong bộ nhớ với độ trễ giả lập và luật nghiệp vụ thật 100%, cho phép dev và kiểm thử offline ngay lập tức.
+   * **Chế độ Mock (Mặc định):** [`MockWordApi`](lib/features/words/data/mock_word_api.dart), [`MockAuthApi`](lib/features/auth/data/mock_auth_api.dart), [`MockPhraseApi`](lib/features/phrases/data/mock_phrase_api.dart) chạy hoàn toàn trong bộ nhớ với độ trễ giả lập và luật nghiệp vụ thật 100%, cho phép dev và kiểm thử offline ngay lập tức.
    * **Chế độ Remote:** Kết nối trực tiếp tới Spring Boot backend qua cấu hình `--dart-define`.
 
 ---
@@ -142,7 +142,7 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
     ```bash
     flutter run --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=http://10.0.2.2:8080
     ```
-  * Hoặc nhấp đúp chạy nhanh file kịch bản có sẵn: [`run_chrome.bat`](file:///c:/Users/dell/Documents/PTUD/l_english/run_chrome.bat) hoặc [`run_emulator.bat`](file:///c:/Users/dell/Documents/PTUD/l_english/run_emulator.bat).
+  * Hoặc nhấp đúp chạy nhanh file kịch bản có sẵn: [`run_chrome.bat`](run_chrome.bat) hoặc [`run_emulator.bat`](run_emulator.bat).
 
 ### 5.2. Kiểm tra mã nguồn & Chạy kiểm thử tự động
 

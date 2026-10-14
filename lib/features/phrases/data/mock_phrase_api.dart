@@ -79,6 +79,9 @@ class MockPhraseApi implements PhraseApi {
     if (text.length < 10) {
       throw ApiException(400, 'Đoạn văn gửi lên không hợp lệ. Vui lòng nhập tối thiểu 10 ký tự.');
     }
+    if (text.length > 5000) {
+      throw ApiException(400, 'Đoạn văn gửi lên không hợp lệ. Vui lòng nhập tối đa 5000 ký tự.');
+    }
 
     // Mô phỏng AI phân tích câu và phát hiện lỗi
     final errors = <GrammarError>[];

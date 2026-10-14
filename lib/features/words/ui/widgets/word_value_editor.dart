@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../data/models/enums.dart';
 import '../../state/word_form_controller.dart';
 
@@ -25,19 +26,34 @@ class WordValueEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Card(
+      elevation: 0,
       margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppTheme.borderLight),
+      ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Text(
-                  'Nghĩa ${index + 1}',
-                  style: theme.textTheme.titleSmall,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Nghĩa ${index + 1}',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 IconButton(
@@ -45,10 +61,15 @@ class WordValueEditor extends StatelessWidget {
                       ? 'Xoá nghĩa này'
                       : 'Từ cần ít nhất một nghĩa',
                   onPressed: canRemove ? onRemove : null,
-                  icon: const Icon(Icons.delete_outline),
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: canRemove ? AppTheme.errorRed : AppTheme.textMuted.withValues(alpha: 0.4),
+                    size: 20,
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: 6),
             TextField(
               controller: row.vietnameseController,
               decoration: const InputDecoration(

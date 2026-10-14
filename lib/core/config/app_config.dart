@@ -11,19 +11,17 @@ class AppConfig {
 
   /// Địa chỉ backend Spring Boot.
   ///
-  /// - Android emulator: giữ mặc định `http://10.0.2.2:8080`
-  ///   (trong emulator, `10.0.2.2` chính là `localhost` của máy tính).
-  /// - Điện thoại thật: dùng IP LAN của máy tính, ví dụ `http://192.168.1.10:8080`.
+  /// Mặc định trỏ đến Cloudflare tunnel backend hoặc có thể ghi đè qua `--dart-define=API_BASE_URL=...`
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080',
+    defaultValue: 'https://lightweight-drawn-delayed-loves.trycloudflare.com',
   );
 
-  /// Bật API giả để app vẫn chạy được khi backend Java chưa xong.
-  /// Tắt bằng `--dart-define=USE_MOCK_API=false`.
+  /// Bật/tắt API giả lập.
+  /// Mặc định dùng backend thật. Có thể bật lại bằng `--dart-define=USE_MOCK_API=true`.
   static const bool useMockApi = bool.fromEnvironment(
     'USE_MOCK_API',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   /// Đường dẫn làm mới token (nhánh `feature/auth`).

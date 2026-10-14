@@ -24,6 +24,11 @@ class PhraseFormController extends ChangeNotifier with SafeChangeNotifier {
       notifyListeners();
       return null;
     }
+    if (text.length > 5000) {
+      errorMessage = 'Đoạn văn gửi lên quá dài (tối đa 5000 ký tự).';
+      notifyListeners();
+      return null;
+    }
 
     isGrading = true;
     errorMessage = null;

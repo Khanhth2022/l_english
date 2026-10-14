@@ -92,7 +92,7 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
       if (!mounted) return;
       await context.read<WordListController>().load();
       if (!mounted) return;
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Đã thêm ${saved.length} từ mới vào sổ từ của bạn!'),

@@ -1,27 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/services/ocr/ocr_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/phrase_api.dart';
 import '../state/phrase_form_controller.dart';
 import '../state/phrase_list_controller.dart';
 import 'widgets/phrase_detail_sheet.dart';
 
-/// Màn hình nhập và gửi đoạn văn bản để AI chấm điểm (act-11, seq-11, seq-12).
+/// Màn hình nhập và gửi đoạn văn bản để AI chấm điểm (act-11, seq-11, seq-12),
+/// tích hợp Quét OCR lấy văn bản từ ảnh on-device (act-17, seq-17).
 class PhraseFormScreen extends StatelessWidget {
-  const PhraseFormScreen({super.key});
+  const PhraseFormScreen({
+    super.key,
+    this.initialText,
+    this.autoScan = false,
+  });
+
+  final String? initialText;
+  final bool autoScan;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (ctx) => PhraseFormController(ctx.read<PhraseApi>()),
-      child: const _PhraseFormView(),
+      create: (ctx) {
+        final controller = PhraseFormController(ctx.read<PhraseApi>());
+        if (initialText != null && initialText!.isNotEmpty) {
+          controller.setText(initialText!);
+        }
+        return controller;
+      },
+      child: _PhraseFormView(autoScan: autoScan),
     );
   }
 }
 
-class _PhraseFormView extends StatelessWidget {
-  const _PhraseFormView();
+class _PhraseFormView extends StatefulWidget {
+  const _PhraseFormView({this.autoScan = false});
+
+  final bool autoScan;
+
+  @override
+  State<_PhraseFormView> createState() => _PhraseFormViewState();
+}
+
+class _PhraseFormViewState extends State<_PhraseFormView> {
+  final OcrService _ocrService = OcrService();
+  bool _isProcessingOcr = false;
 
   static const List<String> _samplePhrases = [
     'I has went to school yesterday with my best friends.',
@@ -31,12 +57,161 @@ class _PhraseFormView extends StatelessWidget {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.autoScan) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          final controller = context.read<PhraseFormController>();
+          _scanOcr(controller);
+        }
+      });
+    }
+  }
+
+  Future<void> _scanOcr(PhraseFormController controller) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.aiPurple.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.document_scanner_rounded, color: AppTheme.aiPurple, size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Quét OCR trích xuất chữ (act-17)',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Chọn nguồn ảnh chứa văn bản tiếng Anh để nhận diện bằng ML Kit on-device và điền vào ô Chấm bài:',
+              style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: AppTheme.aiBg,
+                child: Icon(Icons.camera_alt_rounded, color: AppTheme.aiPurple),
+              ),
+              title: const Text('Chụp ảnh mới bằng Camera', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              subtitle: const Text('Chụp đề bài, sách hoặc tài liệu tiếng Anh', style: TextStyle(fontSize: 12.5)),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+            const SizedBox(height: 6),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: AppTheme.aiBg,
+                child: Icon(Icons.photo_library_rounded, color: AppTheme.aiPurple),
+              ),
+              title: const Text('Chọn ảnh từ Thư viện (Gallery)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              subtitle: const Text('Chọn ảnh chụp màn hình hoặc tài liệu có sẵn', style: TextStyle(fontSize: 12.5)),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+
+    setState(() => _isProcessingOcr = true);
+
+    try {
+      final image = await _ocrService.pickImage(source);
+      if (image == null) {
+        return;
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+              SizedBox(width: 12),
+              Text('Đang tiền xử lý ảnh & chạy ML Kit OCR...'),
+            ],
+          ),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      final extractedText = await _ocrService.extractText(image);
+
+      if (!mounted) return;
+
+      if (extractedText == null || extractedText.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không tìm thấy văn bản trong ảnh'),
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
+      } else {
+        controller.setText(extractedText.trim());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã trích xuất ${extractedText.trim().length} ký tự từ ảnh thành công.'),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi khi quét ảnh OCR: $e'),
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessingOcr = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final controller = context.watch<PhraseFormController>();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chấm đoạn văn bằng AI'),
+        actions: [
+          IconButton(
+            tooltip: 'Quét ảnh (OCR)',
+            icon: _isProcessingOcr
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.document_scanner_rounded),
+            onPressed: (_isProcessingOcr || controller.isGrading)
+                ? null
+                : () => _scanOcr(controller),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
@@ -80,7 +255,7 @@ class _PhraseFormView extends StatelessWidget {
                         ),
                         SizedBox(height: 3),
                         Text(
-                          'Nhập đoạn văn (10–5000 ký tự) để được chấm điểm thang 10, chỉ ra lỗi sai và câu sửa chuẩn.',
+                          'Nhập đoạn văn hoặc quét từ ảnh để chấm điểm thang 10, chỉ ra lỗi sai và câu sửa chuẩn.',
                           style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted),
                         ),
                       ],
@@ -132,7 +307,7 @@ class _PhraseFormView extends StatelessWidget {
                       minLines: 5,
                       onChanged: (_) => (context as Element).markNeedsBuild(),
                       decoration: const InputDecoration(
-                        hintText: 'Nhập câu hoặc đoạn văn tiếng Anh của bạn tại đây...\nVí dụ: I has went to school yesterday.',
+                        hintText: 'Nhập câu hoặc đoạn văn tiếng Anh của bạn tại đây, hoặc bấm Quét ảnh (OCR)...',
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
@@ -153,10 +328,29 @@ class _PhraseFormView extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
+                        OutlinedButton.icon(
+                          onPressed: (_isProcessingOcr || controller.isGrading)
+                              ? null
+                              : () => _scanOcr(controller),
+                          icon: _isProcessingOcr
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.aiPurple),
+                                )
+                              : const Icon(Icons.document_scanner_rounded, size: 16),
+                          label: Text(_isProcessingOcr ? 'Đang quét…' : 'Quét ảnh (OCR)'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.aiPurple,
+                            side: const BorderSide(color: AppTheme.aiPurple),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         TextButton.icon(
                           onPressed: () => _showQuickTemplates(context, controller),
                           icon: const Icon(Icons.lightbulb_outline, size: 18),
-                          label: const Text('Mẫu thử'),
+                          label: const Text('Mẫu câu'),
                         ),
                       ],
                     ),
@@ -240,12 +434,10 @@ class _PhraseFormView extends StatelessWidget {
   Future<void> _submit(BuildContext context, PhraseFormController controller) async {
     final result = await controller.submitForGrading();
     if (result != null && context.mounted) {
-      // Cập nhật vào danh sách nếu có
       try {
         context.read<PhraseListController>().addOrUpdatePhrase(result);
       } catch (_) {}
 
-      // Mở modal kết quả chi tiết
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,

@@ -38,7 +38,7 @@ class MockWordApi implements WordApi {
   bool lastGenerateFromCache = false;
 
   final Map<int, Word> _words = {};
-  final Map<String, List<WordValue>> _wordCache = {};
+  final Map<String, WordDraft> _wordCache = {};
   int _nextId = 1;
 
   /// Giãn cách ôn tập theo số lần đã ôn, đúng dãy trong tài liệu thiết kế.
@@ -128,7 +128,7 @@ class MockWordApi implements WordApi {
   }
 
   @override
-  Future<List<WordValue>> generateMeaning(String english) async {
+  Future<WordDraft> generateMeaning(String english) async {
     final text = english.trim();
     if (text.isEmpty) {
       throw ApiException(400, 'Nhập từ tiếng Anh trước khi nhờ AI sinh nghĩa.');
@@ -202,7 +202,7 @@ class MockWordApi implements WordApi {
     final candidates = bank.where((draft) => !existingEnglish.contains(draft.english.toLowerCase())).take(10).toList();
 
     for (final draft in candidates) {
-      _wordCache[draft.english.toLowerCase()] = draft.values;
+      _wordCache[draft.english.toLowerCase()] = draft;
     }
     return candidates;
   }
@@ -280,6 +280,7 @@ class MockWordApi implements WordApi {
         .where((value) => !value.isBlank)
         .map(
           (value) => WordValue(
+            id: value.id,
             vietnamese: value.vietnamese.trim(),
             example: value.example?.trim(),
             exampleTranslation: value.exampleTranslation?.trim(),
@@ -294,53 +295,69 @@ class MockWordApi implements WordApi {
     return cleaned;
   }
 
-  List<WordValue> _synthesize(String text) => [
-    WordValue(
-      vietnamese: 'nghĩa thứ nhất của "$text" (do AI sinh)',
-      pronunciation: '/${text.toLowerCase()}/',
-      partOfSpeech: PartOfSpeech.noun,
-    ),
-    WordValue(
-      vietnamese: 'nghĩa thứ hai của "$text" (do AI sinh)',
-      example: 'This is an example with $text.',
-      exampleTranslation: 'Đây là ví dụ với $text.',
-      partOfSpeech: PartOfSpeech.verb,
-    ),
-  ];
+  WordDraft _synthesize(String text) => WordDraft(
+    english: text,
+    level: Level.b1,
+    values: [
+      WordValue(
+        vietnamese: 'nghĩa thứ nhất của "$text" (do AI sinh)',
+        pronunciation: '/${text.toLowerCase()}/',
+        partOfSpeech: PartOfSpeech.noun,
+      ),
+      WordValue(
+        vietnamese: 'nghĩa thứ hai của "$text" (do AI sinh)',
+        example: 'This is an example with $text.',
+        exampleTranslation: 'Đây là ví dụ với $text.',
+        partOfSpeech: PartOfSpeech.verb,
+      ),
+    ],
+  );
 
   /// "Từ điển" nhỏ để bản demo trả về nghĩa thật thay vì nghĩa máy sinh.
-  static final Map<String, List<WordValue>> _dictionary = {
-    'resilient': const [
-      WordValue(
-        vietnamese: 'kiên cường, mau hồi phục',
-        pronunciation: '/rɪˈzɪliənt/',
-        partOfSpeech: PartOfSpeech.adjective,
-        example: 'Children are usually resilient.',
-        exampleTranslation: 'Trẻ con thường rất kiên cường.',
-      ),
-      WordValue(
-        vietnamese: 'có sức bật, đàn hồi',
-        partOfSpeech: PartOfSpeech.adjective,
-      ),
-    ],
-    'insight': const [
-      WordValue(
-        vietnamese: 'sự hiểu biết sâu sắc',
-        pronunciation: '/ˈɪnsaɪt/',
-        partOfSpeech: PartOfSpeech.noun,
-        example: 'The book gives an insight into his life.',
-        exampleTranslation: 'Cuốn sách cho ta hiểu sâu về cuộc đời ông ấy.',
-      ),
-    ],
-    'reluctantly': const [
-      WordValue(
-        vietnamese: 'một cách miễn cưỡng',
-        pronunciation: '/rɪˈlʌktəntli/',
-        partOfSpeech: PartOfSpeech.adverb,
-        example: 'She reluctantly agreed.',
-        exampleTranslation: 'Cô ấy miễn cưỡng đồng ý.',
-      ),
-    ],
+  static final Map<String, WordDraft> _dictionary = {
+    'resilient': const WordDraft(
+      english: 'resilient',
+      level: Level.b2,
+      values: [
+        WordValue(
+          vietnamese: 'kiên cường, mau hồi phục',
+          pronunciation: '/rɪˈzɪliənt/',
+          partOfSpeech: PartOfSpeech.adjective,
+          example: 'Children are usually resilient.',
+          exampleTranslation: 'Trẻ con thường rất kiên cường.',
+        ),
+        WordValue(
+          vietnamese: 'có sức bật, đàn hồi',
+          partOfSpeech: PartOfSpeech.adjective,
+        ),
+      ],
+    ),
+    'insight': const WordDraft(
+      english: 'insight',
+      level: Level.b2,
+      values: [
+        WordValue(
+          vietnamese: 'sự hiểu biết sâu sắc',
+          pronunciation: '/ˈɪnsaɪt/',
+          partOfSpeech: PartOfSpeech.noun,
+          example: 'The book gives an insight into his life.',
+          exampleTranslation: 'Cuốn sách cho ta hiểu sâu về cuộc đời ông ấy.',
+        ),
+      ],
+    ),
+    'reluctantly': const WordDraft(
+      english: 'reluctantly',
+      level: Level.c1,
+      values: [
+        WordValue(
+          vietnamese: 'một cách miễn cưỡng',
+          pronunciation: '/rɪˈlʌktəntli/',
+          partOfSpeech: PartOfSpeech.adverb,
+          example: 'She reluctantly agreed.',
+          exampleTranslation: 'Cô ấy miễn cưỡng đồng ý.',
+        ),
+      ],
+    ),
   };
 
   void _seed() {
@@ -363,7 +380,11 @@ class MockWordApi implements WordApi {
         updatedAt: now.subtract(const Duration(days: 1)),
         values: values,
       );
-      _wordCache[english.toLowerCase()] = values;
+      _wordCache[english.toLowerCase()] = WordDraft(
+        english: english,
+        level: level,
+        values: values,
+      );
     }
 
     add(
