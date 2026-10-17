@@ -4,6 +4,7 @@ import '../auth/token_store.dart';
 import '../config/app_config.dart';
 import 'api_exception.dart';
 import 'auth_interceptor.dart';
+import 'ssl_helper.dart';
 
 /// Tạo client dùng chung cho toàn app: base URL, timeout, interceptor JWT.
 Dio createApiClient(TokenStore tokenStore) {
@@ -23,6 +24,9 @@ Dio createApiClient(TokenStore tokenStore) {
   // Client riêng cho lời gọi làm mới token: không gắn interceptor để tránh
   // vòng lặp refresh lồng nhau.
   final refreshClient = Dio(options);
+
+  configureBypassCertificate(dio);
+  configureBypassCertificate(refreshClient);
 
   dio.interceptors.add(
     AuthInterceptor(

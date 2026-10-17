@@ -126,13 +126,28 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           const Icon(Icons.error_outline, color: AppTheme.errorRed, size: 20),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              authController.errorMessage!,
-                              style: const TextStyle(
-                                color: AppTheme.errorRed,
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w500,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  authController.errorMessage!,
+                                  style: const TextStyle(
+                                    color: AppTheme.errorRed,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                if (authController.errorMessage == 'Đăng nhập thất bại') ...[
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Nếu bạn chưa có tài khoản trên máy chủ này, vui lòng chuyển qua tab "Đăng ký".',
+                                    style: TextStyle(
+                                      color: AppTheme.textMuted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
@@ -461,95 +476,231 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   void _showBaseUrlDialog(BuildContext context) {
     final dio = Provider.of<Dio?>(context, listen: false);
     final urlController = TextEditingController(text: AppConfig.apiBaseUrl);
+    ConnectionTestResult? testResult;
+    bool isTesting = false;
 
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.dns_rounded, color: AppTheme.primaryBlue, size: 22),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Cấu hình Base URL',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Nhập địa chỉ máy chủ backend Spring Boot (Cloudflare tunnel hoặc IP máy tính trong mạng LAN):',
-              style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: urlController,
-              autofocus: true,
-              keyboardType: TextInputType.url,
-              decoration: InputDecoration(
-                labelText: 'Backend Base URL',
-                hintText: 'https://...trycloudflare.com',
-                prefixIcon: const Icon(Icons.link_rounded),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.clear, size: 18),
-                  onPressed: urlController.clear,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                border: const OutlineInputBorder(),
+                child: const Icon(Icons.dns_rounded, color: AppTheme.primaryBlue, size: 22),
               ),
-            ),
-            const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: () {
-                urlController.text = AppConfig.defaultApiBaseUrl;
-              },
-              icon: const Icon(Icons.restore_rounded, size: 16),
-              label: const Text('Đặt lại mặc định', style: TextStyle(fontSize: 12.5)),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Cấu hình Base URL',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () {
-              final newUrl = urlController.text.trim();
-              if (newUrl.isEmpty ||
-                  (!newUrl.startsWith('http://') && !newUrl.startsWith('https://'))) {
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Nhập địa chỉ máy chủ backend Spring Boot (Cloudflare tunnel hoặc IP máy tính trong mạng LAN):',
+                  style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: urlController,
+                  autofocus: false,
+                  keyboardType: TextInputType.url,
+                  onChanged: (_) {
+                    if (testResult != null) {
+                      setDialogState(() {
+                        testResult = null;
+                      });
+                    }
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Backend Base URL',
+                    hintText: 'https://...trycloudflare.com',
+                    prefixIcon: const Icon(Icons.link_rounded),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        urlController.clear();
+                        setDialogState(() {
+                          testResult = null;
+                        });
+                      },
+                    ),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Chọn nhanh (Presets):',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    ActionChip(
+                      avatar: const Icon(Icons.cloud_queue_rounded, size: 16),
+                      label: const Text('Cloudflare Tunnel', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        urlController.text = AppConfig.defaultApiBaseUrl;
+                        setDialogState(() => testResult = null);
+                      },
+                    ),
+                    ActionChip(
+                      avatar: const Icon(Icons.phone_android_rounded, size: 16),
+                      label: const Text('Máy ảo (10.0.2.2)', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        urlController.text = 'http://10.0.2.2:8080';
+                        setDialogState(() => testResult = null);
+                      },
+                    ),
+                    ActionChip(
+                      avatar: const Icon(Icons.computer_rounded, size: 16),
+                      label: const Text('Localhost (8080)', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        urlController.text = 'http://localhost:8080';
+                        setDialogState(() => testResult = null);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                // Nút kiểm tra kết nối trực tiếp
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: isTesting
+                        ? null
+                        : () async {
+                            final raw = urlController.text.trim();
+                            if (raw.isEmpty) return;
+                            final normalized = AppConfig.normalizeUrl(raw);
+                            urlController.text = normalized;
+                            setDialogState(() {
+                              isTesting = true;
+                              testResult = null;
+                            });
+                            final result = await AppConfig.testConnection(normalized);
+                            setDialogState(() {
+                              isTesting = false;
+                              testResult = result;
+                            });
+                          },
+                    icon: isTesting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.network_check_rounded, size: 20),
+                    label: Text(
+                      isTesting ? 'Đang kiểm tra kết nối...' : 'Kiểm tra kết nối tới máy chủ',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ),
+                ),
+                // Thẻ thông báo kết quả kiểm tra
+                if (testResult != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: testResult!.isSuccess
+                          ? AppTheme.successGreen.withValues(alpha: 0.1)
+                          : AppTheme.errorRed.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: testResult!.isSuccess
+                            ? AppTheme.successGreen.withValues(alpha: 0.3)
+                            : AppTheme.errorRed.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          testResult!.isSuccess
+                              ? Icons.check_circle_rounded
+                              : Icons.error_outline_rounded,
+                          color: testResult!.isSuccess
+                              ? AppTheme.successGreen
+                              : AppTheme.errorRed,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            testResult!.message,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: testResult!.isSuccess
+                                  ? AppTheme.successGreen
+                                  : AppTheme.errorRed,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                const Text(
+                  '💡 Gợi ý: Nếu dùng máy chủ mới chưa có dữ liệu, hãy sang tab "Đăng ký" để tạo tài khoản mới.',
+                  style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final normalized = AppConfig.normalizeUrl(urlController.text);
+                if (normalized.isEmpty ||
+                    (!normalized.startsWith('http://') && !normalized.startsWith('https://'))) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('URL phải bắt đầu bằng http:// hoặc https://'),
+                      backgroundColor: AppTheme.errorRed,
+                    ),
+                  );
+                  return;
+                }
+                AppConfig.setApiBaseUrl(normalized, dio);
+                Navigator.of(ctx).pop();
+                setState(() {});
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('URL phải bắt đầu bằng http:// hoặc https://'),
-                    backgroundColor: AppTheme.errorRed,
+                  SnackBar(
+                    content: Text('Đã cập nhật máy chủ: $normalized'),
+                    backgroundColor: AppTheme.successGreen,
                   ),
                 );
-                return;
-              }
-              AppConfig.setApiBaseUrl(newUrl, dio);
-              Navigator.of(ctx).pop();
-              setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Đã cập nhật máy chủ: $newUrl'),
-                  backgroundColor: AppTheme.successGreen,
-                ),
-              );
-            },
-            child: const Text('Lưu & Áp dụng'),
-          ),
-        ],
+              },
+              child: const Text('Lưu & Áp dụng'),
+            ),
+          ],
+        ),
       ),
     );
   }
