@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../network/auth_interceptor.dart';
 import '../network/ssl_helper.dart';
+import '../services/widget/widget_service.dart';
 
 /// Cấu hình lúc chạy, đọc từ biến biên dịch (`--dart-define`) để đổi môi trường
 /// mà không phải sửa code, hỗ trợ chỉnh động trong ứng dụng.
@@ -55,6 +56,7 @@ class AppConfig {
   static void setApiBaseUrl(String newUrl, [Dio? dio]) {
     final formatted = normalizeUrl(newUrl);
     apiBaseUrl = formatted;
+    WidgetService.syncWidget(baseUrl: formatted);
     if (dio != null) {
       dio.options.baseUrl = formatted;
       for (final interceptor in dio.interceptors) {

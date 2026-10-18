@@ -15,6 +15,9 @@ import 'topic_words_screen.dart';
 class WordListScreen extends StatelessWidget {
   const WordListScreen({super.key});
 
+  /// Thông báo chuyển tab (0: Tất cả, 1: Ôn tập) được kích hoạt từ Widget Android hoặc deep link.
+  static final ValueNotifier<int> selectedTabNotifier = ValueNotifier<int>(0);
+
   @override
   Widget build(BuildContext context) {
     WordListController? existing;
@@ -50,7 +53,32 @@ class _WordListViewState extends State<_WordListView>
   final TextEditingController _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    WordListScreen.selectedTabNotifier.addListener(_onExternalTabChange);
+    final target = WordListScreen.selectedTabNotifier.value;
+    if (target != 0) {
+      WordListScreen.selectedTabNotifier.value = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _tabs.index != target && target < _tabs.length) {
+          _tabs.animateTo(target);
+        }
+      });
+    }
+  }
+
+  void _onExternalTabChange() {
+    if (!mounted) return;
+    final target = WordListScreen.selectedTabNotifier.value;
+    if (target != 0 && _tabs.index != target && target < _tabs.length) {
+      WordListScreen.selectedTabNotifier.value = 0;
+      _tabs.animateTo(target);
+    }
+  }
+
+  @override
   void dispose() {
+    WordListScreen.selectedTabNotifier.removeListener(_onExternalTabChange);
     _tabs.removeListener(_onTabChanged);
     _tabs.dispose();
     _searchController.dispose();

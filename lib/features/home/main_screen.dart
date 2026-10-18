@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/services/widget/widget_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../android_tools/ui/android_features_screen.dart';
 import '../auth/ui/profile_screen.dart';
@@ -16,6 +17,30 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _handleWidgetLaunch();
+    WidgetService.listenForRoute(_onWidgetRoute);
+  }
+
+  Future<void> _handleWidgetLaunch() async {
+    final route = await WidgetService.getInitialRoute();
+    if (route != null) {
+      _onWidgetRoute(route);
+    }
+  }
+
+  void _onWidgetRoute(String route) {
+    if (!mounted) return;
+    if (route == 'due_words') {
+      setState(() {
+        _currentIndex = 0;
+      });
+      WordListScreen.selectedTabNotifier.value = 1;
+    }
+  }
 
   final List<Widget> _screens = const [
     WordListScreen(),

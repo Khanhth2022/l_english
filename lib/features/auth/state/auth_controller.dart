@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/auth/token_store.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/services/widget/widget_service.dart';
 import '../../../core/state/safe_change_notifier.dart';
 import '../data/auth_api.dart';
 
@@ -32,6 +34,10 @@ class AuthController extends ChangeNotifier with SafeChangeNotifier {
           refreshToken: response.refreshToken,
         ),
         username: username.trim(),
+      );
+      WidgetService.syncWidget(
+        accessToken: response.accessToken,
+        baseUrl: AppConfig.apiBaseUrl,
       );
       return true;
     } on ApiException catch (error) {
@@ -74,6 +80,7 @@ class AuthController extends ChangeNotifier with SafeChangeNotifier {
       } catch (_) {}
     }
     await tokenStore.clear();
+    WidgetService.syncWidget(accessToken: '', dueCount: 0);
     notifyListeners();
   }
 

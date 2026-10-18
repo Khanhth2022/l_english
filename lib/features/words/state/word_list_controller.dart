@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/services/widget/widget_service.dart';
 import '../../../core/state/safe_change_notifier.dart';
 import '../data/models/word.dart';
 import '../data/word_api.dart';
@@ -68,6 +69,7 @@ class WordListController extends ChangeNotifier with SafeChangeNotifier {
       // Bỏ chọn những từ đã bị xoá ở nơi khác.
       _selected.removeWhere((id) => !_words.any((word) => word.id == id));
       status = LoadStatus.success;
+      WidgetService.syncWidget(dueCount: dueCount);
     } on ApiException catch (error) {
       errorMessage = error.message;
       status = LoadStatus.failure;
@@ -109,6 +111,7 @@ class WordListController extends ChangeNotifier with SafeChangeNotifier {
       _words = _words.where((item) => item.id != word.id).toList();
       _selected.remove(word.id);
       notifyListeners();
+      WidgetService.syncWidget(dueCount: dueCount);
       return null;
     } on ApiException catch (error) {
       return error.message;

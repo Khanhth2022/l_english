@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/auth/token_store.dart';
+import '../../../core/config/app_config.dart';
+import '../../../core/services/widget/widget_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../phrases/ui/phrase_form_screen.dart';
 import '../../words/data/word_api.dart';
@@ -107,43 +110,130 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                 icon: Icons.widgets_rounded,
                 iconColor: AppTheme.primaryBlue,
                 title: 'Widget màn hình chính (act-15)',
-                description: 'AppWidgetProvider định kỳ gọi GET /api/words/due-count để cập nhật số từ đến hạn ôn ngay ngoài HomeScreen.',
-                child: Container(
-                  margin: const EdgeInsets.only(top: 10),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.borderLight),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.auto_stories, color: AppTheme.primaryBlue, size: 24),
+                description: 'AppWidgetProvider hiển thị số từ đến hạn ôn tập ngay trên màn hình chính Android, cập nhật định kỳ và hỗ trợ chạm để mở app.',
+                action: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final ok = await WidgetService.pinWidget();
+                        if (context.mounted && !ok) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Hãy thêm widget từ màn hình chính: Nhấn giữ màn hình -> Tiện ích -> LEnglish.',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.push_pin_rounded, size: 16),
+                      label: const Text('Ghim ra màn hình'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final token = context.read<TokenStore>().tokens?.accessToken;
+                        final ok = await WidgetService.syncWidget(
+                          dueCount: dueCount,
+                          accessToken: token,
+                          baseUrl: AppConfig.apiBaseUrl,
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                ok
+                                    ? 'Đã đồng bộ số từ ($dueCount) sang Widget Android thành công!'
+                                    : 'Đã gửi lệnh cập nhật Widget (nền tảng Android).',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.sync_rounded, size: 18),
+                      label: const Text('Đồng bộ ngay'),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceLight,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.borderLight),
                       ),
-                      const SizedBox(width: 12),
-                      Column(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.auto_stories, color: AppTheme.primaryBlue, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'LEnglish • Ôn tập',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+                                ),
+                                Text(
+                                  '$dueCount từ cần ôn lại hôm nay',
+                                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: AppTheme.textMain),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.blue.withValues(alpha: 0.15)),
+                      ),
+                      child: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'LEnglish • Ôn tập',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+                          Row(
+                            children: [
+                              Icon(Icons.info_outline_rounded, size: 16, color: AppTheme.primaryBlue),
+                              SizedBox(width: 6),
+                              Text(
+                                'Cách thêm Widget ra màn hình chính Android:',
+                                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.primaryBlue),
+                              ),
+                            ],
                           ),
+                          SizedBox(height: 6),
                           Text(
-                            '$dueCount từ cần ôn lại hôm nay',
-                            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: AppTheme.textMain),
+                            '1. Về màn hình chính điện thoại -> Nhấn giữ vào chỗ trống.\n'
+                            '2. Chọn mục "Tiện ích" (Widgets) -> Tìm ứng dụng "LEnglish".\n'
+                            '3. Nhấn giữ tiện ích "LEnglish • Ôn tập SRS" và kéo ra vị trí mong muốn.\n'
+                            '4. Chạm vào widget ngoài màn hình sẽ mở thẳng vào tab Ôn tập.',
+                            style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.45),
                           ),
                         ],
                       ),
-                      const Spacer(),
-                      const Icon(Icons.chevron_right, color: AppTheme.textMuted),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
