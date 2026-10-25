@@ -28,6 +28,27 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- ACT-15: Deep link & Action mở thẳng câu hỏi ôn tập từ Widget -->
+            <intent-filter>
+                <action android:name="com.lenglish.l_english.ACTION_OPEN_DUE_WORDS" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="lenglish" android:host="review" />
+            </intent-filter>
+
+            <!-- ACT-16: Bôi đen văn bản ở bất kỳ ứng dụng nào để thêm từ vào LEnglish -->
+            <intent-filter android:label="@string/process_text_action">
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <!-- Hỗ trợ chia sẻ văn bản vào LEnglish -->
+            <intent-filter android:label="@string/share_action">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
         <!-- ACT-15: Widget màn hình chính Android -->
         <receiver

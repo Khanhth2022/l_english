@@ -8,6 +8,7 @@ import '../data/word_api.dart';
 import '../state/word_list_controller.dart';
 import 'connection_settings_screen.dart';
 import 'widgets/word_card.dart';
+import 'review_quiz_screen.dart';
 import 'word_form_screen.dart';
 import 'topic_words_screen.dart';
 
@@ -60,8 +61,13 @@ class _WordListViewState extends State<_WordListView>
     if (target != 0) {
       WordListScreen.selectedTabNotifier.value = 0;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _tabs.index != target && target < _tabs.length) {
-          _tabs.animateTo(target);
+        if (mounted && target < _tabs.length) {
+          if (_tabs.index != target) {
+            _tabs.animateTo(target);
+          }
+          if (target == 1) {
+            _startReviewQuiz();
+          }
         }
       });
     }
@@ -70,9 +76,18 @@ class _WordListViewState extends State<_WordListView>
   void _onExternalTabChange() {
     if (!mounted) return;
     final target = WordListScreen.selectedTabNotifier.value;
-    if (target != 0 && _tabs.index != target && target < _tabs.length) {
+    if (target != 0) {
       WordListScreen.selectedTabNotifier.value = 0;
-      _tabs.animateTo(target);
+      if (_tabs.index != target && target < _tabs.length) {
+        _tabs.animateTo(target);
+      }
+      if (target == 1) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _startReviewQuiz();
+          }
+        });
+      }
     }
   }
 
@@ -88,6 +103,107 @@ class _WordListViewState extends State<_WordListView>
   void _onTabChanged() {
     if (!mounted) return;
     context.read<WordListController>().setOnlyDue(_tabs.index == 1);
+  }
+
+  Future<void> _startReviewQuiz() async {
+    final controller = context.read<WordListController>();
+    if (controller.status == LoadStatus.loading || controller.status == LoadStatus.idle) {
+      int waitMs = 0;
+      while (mounted && controller.status == LoadStatus.loading && waitMs < 3000) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        waitMs += 100;
+      }
+    }
+    if (!mounted) return;
+
+    final now = DateTime.now();
+    final dueWords = controller.words.where((w) => w.isDue(now)).toList();
+    if (dueWords.isEmpty) {
+      _showMessage(context, 'Tuyệt vời! Bạn không còn từ nào cần ôn tập hôm nay.');
+      return;
+    }
+
+    final navigator = Navigator.of(context);
+    final changed = await navigator.push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ReviewQuizScreen(
+          words: dueWords,
+          allWords: controller.words,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (changed == true) {
+      await controller.load();
+    }
+  }
+
+  Widget _buildReviewQuizBanner(BuildContext context, WordListController controller) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppTheme.primaryDark, AppTheme.primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryLight.withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Có ${controller.dueCount} từ cần ôn tập!',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Luyện trắc nghiệm để củng cố trí nhớ dài hạn.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: AppTheme.primaryDark,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+            onPressed: () => _startReviewQuiz(),
+            child: const Text('Bắt đầu'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _openTopicWords(
@@ -193,6 +309,8 @@ class _WordListViewState extends State<_WordListView>
               ),
             ),
           ),
+          if (controller.onlyDue && controller.dueCount > 0)
+            _buildReviewQuizBanner(context, controller),
           if (controller.onlyDue && controller.dueCount > 0)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
@@ -333,21 +451,33 @@ class _WordListViewState extends State<_WordListView>
         label: const Text('Thêm từ'),
       );
     }
-    if (controller.selectedCount == 0) return null;
-    return FloatingActionButton.extended(
-      heroTag: 'word_list_review_fab',
-      onPressed: controller.submitting
-          ? null
-          : () => _confirmReview(context, controller),
-      icon: controller.submitting
-          ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.done_all),
-      label: Text('Đã ôn ${controller.selectedCount} từ'),
-    );
+    if (controller.selectedCount > 0) {
+      return FloatingActionButton.extended(
+        heroTag: 'word_list_review_fab',
+        onPressed: controller.submitting
+            ? null
+            : () => _confirmReview(context, controller),
+        icon: controller.submitting
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.done_all),
+        label: Text('Đã ôn ${controller.selectedCount} từ'),
+      );
+    }
+    if (controller.dueCount > 0) {
+      return FloatingActionButton.extended(
+        heroTag: 'word_list_quiz_fab',
+        backgroundColor: AppTheme.aiPurple,
+        foregroundColor: Colors.white,
+        onPressed: () => _startReviewQuiz(),
+        icon: const Icon(Icons.quiz_rounded),
+        label: Text('Ôn tập (${controller.dueCount})'),
+      );
+    }
+    return null;
   }
 
   Future<void> _openForm(

@@ -3,4 +3,6 @@
     <string name="app_name">LEnglish</string>
     <string name="widget_name">LEnglish • Ôn tập SRS</string>
     <string name="widget_description">Hiển thị số lượng từ vựng cần ôn tập hôm nay và mở nhanh vào ứng dụng.</string>
+    <string name="process_text_action">Thêm vào LEnglish</string>
+    <string name="share_action">Thêm từ vào LEnglish</string>
 </resources>

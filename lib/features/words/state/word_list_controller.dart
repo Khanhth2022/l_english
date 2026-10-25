@@ -118,15 +118,15 @@ class WordListController extends ChangeNotifier with SafeChangeNotifier {
     }
   }
 
-  /// Ghi nhận đã ôn các từ đang được chọn rồi tải lại danh sách để thấy
-  /// `reviewCount` và `nextReview` mới.
-  Future<String?> confirmReview() async {
-    if (_selected.isEmpty) return 'Chưa chọn từ nào để xác nhận ôn tập.';
+  /// Ghi nhận đã ôn các từ chỉ định rồi tải lại danh sách để thấy
+  /// `reviewCount` và `nextReview` mới (ACT-19).
+  Future<String?> confirmReviewWords(List<int> wordIds) async {
+    if (wordIds.isEmpty) return 'Chưa chọn từ nào để xác nhận ôn tập.';
     submitting = true;
     notifyListeners();
     try {
-      await _api.confirmReview(_selected.toList());
-      _selected.clear();
+      await _api.confirmReview(wordIds);
+      _selected.removeWhere((id) => wordIds.contains(id));
       await load();
       return null;
     } on ApiException catch (error) {
@@ -136,4 +136,7 @@ class WordListController extends ChangeNotifier with SafeChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Ghi nhận đã ôn các từ đang được chọn rồi tải lại danh sách.
+  Future<String?> confirmReview() => confirmReviewWords(_selected.toList());
 }

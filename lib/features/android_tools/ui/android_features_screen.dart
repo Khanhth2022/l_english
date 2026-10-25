@@ -216,9 +216,11 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                             children: [
                               Icon(Icons.info_outline_rounded, size: 16, color: AppTheme.primaryBlue),
                               SizedBox(width: 6),
-                              Text(
-                                'Cách thêm Widget ra màn hình chính Android:',
-                                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.primaryBlue),
+                              Expanded(
+                                child: Text(
+                                  'Cách thêm Widget ra màn hình chính Android:',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.primaryBlue),
+                                ),
                               ),
                             ],
                           ),
@@ -284,11 +286,46 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
             icon: Icons.text_fields_rounded,
             iconColor: AppTheme.successGreen,
             title: 'Thêm từ từ bộ chọn văn bản (act-16)',
-            description: 'Bôi đen bất kỳ từ tiếng Anh nào trên trình duyệt hay ứng dụng khác, chọn menu "LEnglish" để mở màn hình Thêm từ và tự động gọi AI sinh nghĩa.',
+            description: 'Bôi đen bất kỳ từ hoặc câu tiếng Anh nào trên trình duyệt, PDF, hoặc ứng dụng khác; chọn "Thêm vào LEnglish" để tự động điền và tạo nghĩa bằng AI.',
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.15)),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.touch_app_rounded, size: 16, color: AppTheme.successGreen),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Cách sử dụng trên Android:',
+                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.successGreen),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    '1. Mở bất kỳ ứng dụng nào (Chrome, Báo tiếng Anh, Facebook, PDF...)\n'
+                    '2. Bôi đen từ tiếng Anh bạn muốn tra (ví dụ: resilient).\n'
+                    '3. Trên thanh công cụ nổi (sát Sao chép / Chia sẻ), chọn "Thêm vào LEnglish".\n'
+                    '4. LEnglish tự động mở ra với từ đã điền sẵn, sẵn sàng để AI sinh nghĩa và lưu.',
+                    style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.45),
+                  ),
+                ],
+              ),
+            ),
             action: OutlinedButton.icon(
               onPressed: () async {
                 final changed = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(builder: (_) => const WordFormScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const WordFormScreen(initialEnglish: 'resilient'),
+                  ),
                 );
                 if (changed == true && context.mounted) {
                   try {
@@ -296,8 +333,8 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                   } catch (_) {}
                 }
               },
-              icon: const Icon(Icons.open_in_new, size: 16),
-              label: const Text('Thử mở màn Thêm từ'),
+              icon: const Icon(Icons.bolt_rounded, size: 16),
+              label: const Text('Thử nghiệm với từ mẫu "resilient"'),
             ),
           ),
           const SizedBox(height: 20),

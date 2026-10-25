@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../android_tools/ui/android_features_screen.dart';
 import '../auth/ui/profile_screen.dart';
 import '../phrases/ui/phrase_list_screen.dart';
+import '../words/ui/word_form_screen.dart';
 import '../words/ui/word_list_screen.dart';
 
 /// Màn hình điều hướng chính của ứng dụng LEnglish (Modern Navigation Bar).
@@ -22,7 +23,9 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _handleWidgetLaunch();
+    _handleProcessTextLaunch();
     WidgetService.listenForRoute(_onWidgetRoute);
+    WidgetService.listenForProcessText(_onProcessText);
   }
 
   Future<void> _handleWidgetLaunch() async {
@@ -32,9 +35,33 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  Future<void> _handleProcessTextLaunch() async {
+    final text = await WidgetService.getInitialProcessText();
+    if (text != null && text.trim().isNotEmpty) {
+      _onProcessText(text.trim());
+    }
+  }
+
+  void _onProcessText(String text) {
+    if (!mounted || text.trim().isEmpty) return;
+    if (_currentIndex != 0) {
+      setState(() {
+        _currentIndex = 0;
+      });
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => WordFormScreen(initialEnglish: text.trim()),
+        ),
+      );
+    });
+  }
+
   void _onWidgetRoute(String route) {
     if (!mounted) return;
-    if (route == 'due_words') {
+    if (route == 'due_words' || route == 'review') {
       setState(() {
         _currentIndex = 0;
       });

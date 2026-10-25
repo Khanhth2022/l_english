@@ -320,37 +320,55 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                         Text(
                           '${controller.characterCount} ký tự',
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 12,
                             color: controller.characterCount < 10
                                 ? AppTheme.errorRed
                                 : AppTheme.textMuted,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const Spacer(),
-                        OutlinedButton.icon(
-                          onPressed: (_isProcessingOcr || controller.isGrading)
-                              ? null
-                              : () => _scanOcr(controller),
-                          icon: _isProcessingOcr
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.aiPurple),
-                                )
-                              : const Icon(Icons.document_scanner_rounded, size: 16),
-                          label: Text(_isProcessingOcr ? 'Đang quét…' : 'Quét ảnh (OCR)'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.aiPurple,
-                            side: const BorderSide(color: AppTheme.aiPurple),
-                            visualDensity: VisualDensity.compact,
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            reverse: true,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: (_isProcessingOcr || controller.isGrading)
+                                      ? null
+                                      : () => _scanOcr(controller),
+                                  icon: _isProcessingOcr
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.aiPurple),
+                                        )
+                                      : const Icon(Icons.document_scanner_rounded, size: 15),
+                                  label: Text(_isProcessingOcr ? 'Đang quét…' : 'Quét ảnh (OCR)'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.aiPurple,
+                                    side: const BorderSide(color: AppTheme.aiPurple),
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    textStyle: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                TextButton.icon(
+                                  onPressed: () => _showQuickTemplates(context, controller),
+                                  icon: const Icon(Icons.lightbulb_outline, size: 16),
+                                  label: const Text('Mẫu câu'),
+                                  style: TextButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                    textStyle: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton.icon(
-                          onPressed: () => _showQuickTemplates(context, controller),
-                          icon: const Icon(Icons.lightbulb_outline, size: 18),
-                          label: const Text('Mẫu câu'),
                         ),
                       ],
                     ),

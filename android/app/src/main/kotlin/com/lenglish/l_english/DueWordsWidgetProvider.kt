@@ -24,7 +24,7 @@ import java.util.concurrent.Executors
  * - Cập nhật định kỳ bởi hệ thống Android (onUpdate)
  * - Nút bấm làm mới thủ công trên Widget
  * - Đồng bộ trực tiếp từ Flutter khi người dùng đăng nhập, đổi từ, hoặc ôn tập
- * - Chạm vào widget mở thẳng vào tab Ôn tập của ứng dụng LEnglish
+ * - Chạm vào widget mở thẳng vào phiên câu hỏi ôn tập của ứng dụng LEnglish
  */
 class DueWordsWidgetProvider : AppWidgetProvider() {
 
@@ -231,12 +231,12 @@ class DueWordsWidgetProvider : AppWidgetProvider() {
         val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
         views.setTextViewText(R.id.widget_update_time, "Cập nhật: " + timeFormat.format(Date()))
 
-        // Khi người dùng bấm vào widget -> Mở app vào thẳng tab Ôn tập
+        // Khi người dùng bấm vào widget -> Mở app vào thẳng phiên câu hỏi ôn tập
         val launchIntent = Intent(context, MainActivity::class.java).apply {
-            action = Intent.ACTION_MAIN
-            addCategory(Intent.CATEGORY_LAUNCHER)
+            action = MainActivity.ACTION_OPEN_DUE_WORDS
+            data = android.net.Uri.parse("lenglish://review")
             putExtra(MainActivity.EXTRA_ROUTE, MainActivity.ROUTE_DUE_WORDS)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

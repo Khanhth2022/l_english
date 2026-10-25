@@ -13,16 +13,22 @@ import 'widgets/word_value_editor.dart';
 ///
 /// Khi lưu thành công, màn hình trả về `true` để danh sách tải lại.
 class WordFormScreen extends StatelessWidget {
-  const WordFormScreen({super.key, this.existing});
+  const WordFormScreen({super.key, this.existing, this.initialEnglish});
 
   /// `null` nghĩa là thêm từ mới.
   final Word? existing;
 
+  /// Từ tiếng Anh khởi tạo (ví dụ chia sẻ hoặc bôi đen từ ứng dụng khác).
+  final String? initialEnglish;
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (ctx) =>
-          WordFormController(api: ctx.read<WordApi>(), existing: existing),
+      create: (ctx) => WordFormController(
+        api: ctx.read<WordApi>(),
+        existing: existing,
+        initialEnglish: initialEnglish,
+      ),
       child: const _WordFormView(),
     );
   }

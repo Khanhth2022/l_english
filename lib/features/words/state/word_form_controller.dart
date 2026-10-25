@@ -71,9 +71,12 @@ class WordValueRow {
 
 /// State của màn hình Thêm/Sửa từ.
 class WordFormController extends ChangeNotifier with SafeChangeNotifier {
-  WordFormController({required this.api, Word? existing})
-    : _existing = existing {
-    englishController.text = existing?.english ?? '';
+  WordFormController({
+    required this.api,
+    Word? existing,
+    String? initialEnglish,
+  }) : _existing = existing {
+    englishController.text = existing?.english ?? (initialEnglish?.trim() ?? '');
     level = existing?.level;
     rows = (existing == null || existing.values.isEmpty)
         ? [WordValueRow()]
