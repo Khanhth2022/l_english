@@ -1,8 +1,9 @@
 # 📘 LEnglish — Ứng dụng Học Từ Vựng Thông Minh & Luyện Viết Cùng AI
 
-> **Phiên bản:** `1.0.0` • **Nền tảng:** Flutter (Dart ^3.13) / Android  
+> **Phiên bản:** `1.0.0+1` • **Nền tảng:** Flutter (Dart ^3.13) / Android  
 > **Kiến trúc:** Feature-First, Repository Pattern, MultiProvider  
-> **Backend tương thích:** Spring Boot (REST API, JWT Bearer, MySQL 8 bảng)
+> **Backend tương thích:** Spring Boot (REST API, JWT Bearer, MySQL 8 bảng)  
+> **Cập nhật từ xa (OTA):** Tích hợp Shorebird CodePush (App ID: `95861344-11a7-47da-a26c-7a504b060900`)
 
 ---
 
@@ -10,10 +11,16 @@
 
 **LEnglish** là giải pháp hỗ trợ người học tiếng Anh toàn diện, kết hợp giữa phương pháp ghi nhớ khoa học và trí tuệ nhân tạo (AI):
 * 📖 **Ghi nhớ từ vựng qua Spaced Repetition (SRS):** Tự động lên lịch giãn cách ôn tập (1, 2, 4, 7, 15, 30 ngày) dựa trên số lần ôn thực tế, tối ưu hóa khả năng ghi nhớ dài hạn vào vỏ não.
+* 🧠 **Phiên câu hỏi ôn tập tương tác (Review Quiz - ACT-15, ACT-19):** Giao diện trắc nghiệm 4 đáp án thông minh chọn nghĩa đúng (tự động trích xuất đáp án gây nhiễu từ kho từ vựng), gợi ý ngữ cảnh, phiên âm IPA, cấp độ CEFR, phản hồi đúng/sai tức thì và tự động xác nhận cập nhật chu kỳ SRS lên hệ thống.
 * 🤖 **Tra cứu & Sinh nghĩa từ bằng AI (Cache-First):** AI tự động phân tích từ vựng, trích xuất CEFR Level (A1–C2), phiên âm IPA, từ loại, nghĩa tiếng Việt và ví dụ ngữ cảnh; cơ chế cache dùng chung giúp tối ưu tốc độ và giảm chi phí gọi AI.
 * 💡 **Đề xuất từ vựng theo chủ đề (AI Topic Generator):** Người dùng chỉ cần nhập chủ đề (công sở, du lịch, công nghệ...), AI tự động loại trừ các từ đã có trong sổ và sinh 10 từ mới chất lượng cao để nạp nhanh vào sổ từ.
 * ✍️ **Luyện viết & Chấm điểm ngữ pháp bằng AI:** Nhận diện và bóc tách câu văn tiếng Anh (10–5000 ký tự), chấm điểm trên thang 10, chỉ ra từng cụm từ sai ngữ pháp, cung cấp câu sửa chuẩn hoàn chỉnh và giải thích chi tiết bằng tiếng Việt.
-* 📱 **Tích hợp sâu hệ điều hành Android:** Mô phỏng widget màn hình chính hiển thị số từ đến hạn ôn tập, thông báo nhắc nhở định kỳ (WorkManager), quét OCR trích xuất chữ từ ảnh/sách vào ô chấm bài (ML Kit), và tiện ích bôi đen từ vựng tra cứu nhanh (`PROCESS_TEXT`).
+* 📱 **Tích hợp sâu hệ điều hành Android (ACT-14 đến ACT-17):**
+  - **Widget màn hình chính (ACT-15):** Hiển thị số từ đến hạn ôn tập; chạm vào widget tự động mở thẳng vào phiên câu hỏi ôn tập.
+  - **Bôi đen văn bản từ ứng dụng ngoài (ACT-16):** Chọn "Thêm vào LEnglish" từ menu nổi của Android (`ACTION_PROCESS_TEXT` / `ACTION_SEND`) để nạp nhanh từ vựng và tự động gọi AI sinh nghĩa.
+  - **Quét chữ từ ảnh/camera (ACT-17 OCR):** Tích hợp Google ML Kit trích xuất văn bản vào ô chấm bài viết.
+  - **Thông báo định kỳ (ACT-14):** Nhắc nhở người học ôn tập từ vựng đúng lịch.
+* ⚡ **Cập nhật mã nguồn tức thì qua OTA (Shorebird CodePush):** Cập nhật tính năng và sửa lỗi giao diện/logic trực tiếp từ đám mây xuống ứng dụng mà không cần người dùng phải tải và cài lại file APK 200MB.
 
 ---
 
@@ -31,6 +38,8 @@ lib/
 │   │   ├── api_client.dart         # Cấu hình Dio Client, timeout, Base URL
 │   │   ├── api_exception.dart      # Chuẩn hóa lỗi HTTP (400, 401, 403, 409, 502, 500)
 │   │   └── auth_interceptor.dart   # Gắn Bearer JWT, tự bắt 401 xoay vòng Refresh Token (single-flight)
+│   ├── services/                   # Các service hệ thống (Widget Android, OCR, Notification)
+│   │   └── widget/                 # Service đồng bộ Widget màn hình chính và nhận Intent bôi đen
 │   ├── theme/                      # Design System Material 3 hiện đại
 │   │   └── app_theme.dart          # Bảng màu Blue/Emerald/Violet AI, Card, Typography, Button
 │   ├── ui/                         # Các widget trạng thái tái sử dụng (Loading, Error, Empty View)
@@ -43,15 +52,15 @@ lib/
 │   │   ├── state/                  # AuthController (quản lý login, register, logout, notify)
 │   │   └── ui/                     # AuthScreen (form đăng nhập/đăng ký), ProfileScreen (thông tin phiên)
 │   │
-│   ├── words/                      # [Phân hệ 2] Quản lý từ vựng & SRS (act-05..09, 19, 20)
+│   ├── words/                      # [Phân hệ 2] Quản lý từ vựng & SRS (act-05..09, 15, 16, 19, 20)
 │   │   ├── data/                   # Models (Word, WordValue, WordDraft, Level, PartOfSpeech)
 │   │   │   ├── word_api.dart       # Contract WordApi (CRUD từ, generate AI, SRS, topic words)
 │   │   │   ├── remote_word_api.dart# Gọi trực tiếp Spring Boot REST endpoints
 │   │   │   └── mock_word_api.dart  # Mock in-memory đầy đủ thuật toán SRS, cache-first, mã lỗi
 │   │   ├── state/                  # WordListController, WordFormController
-│   │   └── ui/                     # WordListScreen (Tab Tất cả & Ôn tập), WordFormScreen, TopicWordsScreen
+│   │   └── ui/                     # WordListScreen, ReviewQuizScreen, WordFormScreen, TopicWordsScreen
 │   │
-│   ├── phrases/                    # [Phân hệ 3] Quản lý đoạn văn & Chấm AI (act-10 đến act-13)
+│   ├── phrases/                    # [Phân hệ 3] Quản lý đoạn văn & Chấm AI (act-10 đến act-13, 17)
 │   │   ├── data/                   # Models (Phrase, GrammarError), PhraseApi, Remote & Mock Phrase API
 │   │   ├── state/                  # PhraseListController, PhraseFormController
 │   │   └── ui/                     # PhraseListScreen, PhraseFormScreen, PhraseDetailSheet (phân tích lỗi)
@@ -60,10 +69,11 @@ lib/
 │   │   └── ui/                     # AndroidFeaturesScreen (Demo OCR, HomeScreen Widget, Notification)
 │   │
 │   └── home/                       # Khung điều hướng trung tâm
-│       └── main_screen.dart        # Modern NavigationBar 4 tab chuyển đổi mượt mà
+│       └── main_screen.dart        # NavigationBar 4 tab, đón Intent từ Widget và bôi đen văn bản
 │
 ├── app.dart                        # Cấu hình MultiProvider, MaterialApp, Theme và chuyển đổi Auth/Main
-└── main.dart                       # Entry point ứng dụng, khởi tạo TokenStore và các Service
+├── main.dart                       # Entry point ứng dụng, khởi tạo TokenStore và các Service
+└── shorebird.yaml                  # Cấu hình Shorebird CodePush (App ID & OTA updates)
 ```
 
 ---
@@ -92,7 +102,7 @@ Dự án tuân thủ nghiêm ngặt 20 sơ đồ Use Case / Activity / Sequence 
 | | `act-12` / `seq-12` | — *(Internal)* | AI chấm điểm: tính score 0–10, correctedText và grammar_errors |
 | | `act-13` / `seq-13` | `DELETE /api/phrases/{id}`| Xóa đoạn văn (cascade lỗi ngữ pháp) |
 | **Android OS** | `act-14` / `seq-14` | Client Service | Thông báo nhắc nhở ôn tập định kỳ hàng ngày |
-| | `act-15` / `seq-15` | Client Service | Widget màn hình chính cập nhật số từ đến hạn |
+| | `act-15` / `seq-15` | Client Service / Native | Widget màn hình chính cập nhật số từ đến hạn, chạm mở phiên Quiz |
 | | `act-16` / `seq-16` | Android Intent | Bôi đen văn bản ở ứng dụng khác và chọn thêm vào LEnglish |
 | | `act-17` / `seq-17` | ML Kit OCR | Quét ảnh/camera trích xuất chữ đưa vào ô chấm bài |
 
@@ -120,9 +130,9 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
 
 ---
 
-## 🚀 5. Hướng dẫn chạy & Kiểm thử
+## 🚀 5. Hướng dẫn chạy, Đóng gói APK & Cập nhật OTA
 
-### 5.1. Khởi chạy ứng dụng
+### 5.1. Khởi chạy ứng dụng trong quá trình phát triển (Hot Reload)
 
 * **Chạy với Mock in-memory (mặc định — sẵn tài khoản mẫu `user1` / `password123`):**
   ```bash
@@ -130,10 +140,6 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
   ```
 
 * **Chạy kết nối Backend Spring Boot thật:**
-  * Với Backend qua Cloudflare Tunnel (chạy trên Chrome):
-    ```bash
-    flutter run -d chrome --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://neighborhood-compliance-gratis-sensors.trycloudflare.com
-    ```
   * Với Backend qua Cloudflare Tunnel (chạy trên Máy ảo Android):
     ```bash
     flutter run -d android --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://neighborhood-compliance-gratis-sensors.trycloudflare.com
@@ -144,14 +150,60 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
     ```
   * Hoặc nhấp đúp chạy nhanh file kịch bản có sẵn: [`run_chrome.bat`](run_chrome.bat) hoặc [`run_emulator.bat`](run_emulator.bat).
 
-### 5.2. Kiểm tra mã nguồn & Chạy kiểm thử tự động
+---
+
+### 5.2. Đóng gói file APK để Test hoặc Cài đặt thực tế
+
+* **Đóng gói bản Debug (Dùng cho dev test nhanh):**
+  ```powershell
+  flutter build apk --debug
+  # Hoặc nhấp đúp file: build_apk.bat
+  # File xuất ra: build/app/outputs/flutter-apk/app-debug.apk (~191MB)
+  ```
+
+* **Đóng gói bản Release chuẩn (Tối ưu hóa ProGuard R8, siêu mượt, nhẹ ~50MB - 80MB):**
+  ```powershell
+  flutter build apk --release
+  # File xuất ra: build/app/outputs/flutter-apk/app-release.apk
+  ```
+
+* **Cài đặt đè lên điện thoại qua cáp USB:**
+  ```powershell
+  adb install -r build/app/outputs/flutter-apk/app-release.apk
+  ```
+
+---
+
+### 5.3. Cập nhật mã nguồn từ xa bằng Shorebird CodePush (OTA)
+
+Dự án đã tích hợp sẵn công nghệ **Shorebird CodePush**. Người dùng chỉ cần cài APK một lần duy nhất, các bản cập nhật sau sẽ được tải ngầm qua Internet:
+
+1. **Đóng gói bản phát hành Shorebird Release (Làm 1 lần khi cài app lên máy):**
+   ```powershell
+   shorebird release android --artifact apk --flutter-version 3.47.5 --target-platform android-arm64
+   # Cài file APK được tạo tại: build/app/outputs/flutter-apk/app-release.apk
+   ```
+
+2. **Đẩy bản vá (Patch) khi thay đổi code trên Git (Không cần cài lại APK):**
+   ```powershell
+   # 1. Kéo code mới về
+   git pull
+
+   # 2. Đẩy bản vá lên đám mây Shorebird
+   shorebird patch --platforms=android --release-version=1.0.0+1
+   ```
+   *Người dùng chỉ việc mở app trên điện thoại, bản vá nhẹ (~1MB) sẽ tự động tải ngầm và áp dụng ngay lập tức.*
+
+---
+
+### 5.4. Kiểm tra mã nguồn & Chạy kiểm thử tự động
 
 Dự án duy trì tiêu chuẩn kiểm thử khắt khe:
 ```powershell
 # 1. Phân tích cú pháp và quy chuẩn (yêu cầu: 0 lỗi, 0 cảnh báo)
 flutter analyze --no-pub
 
-# 2. Chạy toàn bộ 72 bài kiểm thử tự động (Unit test, Model test, Controller test, Widget test)
+# 2. Chạy toàn bộ 90 bài kiểm thử tự động (Unit test, Model test, Controller test, Widget test)
 $env:NO_PROXY="localhost,127.0.0.1"; flutter test --no-pub
 ```
 
