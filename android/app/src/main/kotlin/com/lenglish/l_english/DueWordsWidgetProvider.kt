@@ -76,7 +76,7 @@ class DueWordsWidgetProvider : AppWidgetProvider() {
 
     private fun updateWidgetContent(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val token = prefs.getString(KEY_ACCESS_TOKEN, null)
+        val token = SecurePrefs.getToken(prefs)
         val baseUrl = prefs.getString(KEY_BASE_URL, null)
         val cachedCount = prefs.getInt(KEY_DUE_COUNT, -1)
 

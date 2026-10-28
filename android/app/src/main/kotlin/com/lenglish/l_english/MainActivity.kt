@@ -55,7 +55,7 @@ class MainActivity : FlutterActivity() {
                         editor.putInt(DueWordsWidgetProvider.KEY_DUE_COUNT, dueCount)
                     }
                     if (accessToken != null) {
-                        editor.putString(DueWordsWidgetProvider.KEY_ACCESS_TOKEN, accessToken)
+                        SecurePrefs.putToken(prefs, accessToken)
                     }
                     if (baseUrl != null) {
                         editor.putString(DueWordsWidgetProvider.KEY_BASE_URL, baseUrl)
