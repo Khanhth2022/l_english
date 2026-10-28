@@ -149,7 +149,8 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
     } on ApiException catch (error) {
       return error.message;
     } catch (error) {
-      return 'Không sinh được nghĩa ($error).';
+      debugPrint('WordFormController: sinh nghĩa thất bại ($error).');
+      return 'Không sinh được nghĩa cho từ này. Vui lòng thử lại.';
     } finally {
       generating = false;
       notifyListeners();
@@ -184,7 +185,8 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
     } on ApiException catch (error) {
       return error.message;
     } catch (error) {
-      return 'Không lưu được từ ($error).';
+      debugPrint('WordFormController: lưu từ thất bại ($error).');
+      return 'Không lưu được từ. Vui lòng thử lại.';
     } finally {
       saving = false;
       notifyListeners();

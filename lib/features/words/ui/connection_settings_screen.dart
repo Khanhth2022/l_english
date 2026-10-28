@@ -97,8 +97,11 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
             : 'Đã lưu cấu hình và đồng bộ xuống widget.',
       );
     } catch (error) {
+      debugPrint('ConnectionSettingsScreen: không lưu được cấu hình ($error).');
       if (!mounted) return;
-      _showMessage('Không lưu được cấu hình: $error');
+      _showMessage(
+        'Không lưu được cấu hình. Vui lòng kiểm tra lại Base URL và token.',
+      );
     } finally {
       if (mounted) {
         setState(() {

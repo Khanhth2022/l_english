@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
@@ -57,7 +58,8 @@ class RemotePhraseApi implements PhraseApi {
     } on ApiException {
       rethrow;
     } catch (error) {
-      throw ApiException(0, 'Lỗi kết nối máy chủ ($error).');
+      debugPrint('RemotePhraseApi: phản hồi không hợp lệ ($error).');
+      throw ApiException(0, 'Máy chủ trả về dữ liệu không hợp lệ.');
     }
   }
 }

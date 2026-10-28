@@ -68,7 +68,8 @@ class PhraseListController extends ChangeNotifier with SafeChangeNotifier {
       status = PhraseListStatus.failure;
     } catch (e) {
       if (_tokenStore?.hasSession == false) return;
-      errorMessage = 'Không tải được danh sách đoạn văn ($e).';
+      debugPrint('PhraseListController: không tải được danh sách ($e).');
+      errorMessage = 'Không tải được danh sách đoạn văn. Vui lòng thử lại.';
       status = PhraseListStatus.failure;
     }
     notifyListeners();
@@ -83,7 +84,8 @@ class PhraseListController extends ChangeNotifier with SafeChangeNotifier {
     } on ApiException catch (error) {
       return error.message;
     } catch (e) {
-      return 'Lỗi khi xóa ($e).';
+      debugPrint('PhraseListController: xoá đoạn văn thất bại ($e).');
+      return 'Không xoá được đoạn văn. Vui lòng thử lại.';
     }
   }
 

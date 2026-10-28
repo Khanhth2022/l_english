@@ -112,7 +112,8 @@ class WordListController extends ChangeNotifier with SafeChangeNotifier {
       status = LoadStatus.failure;
     } catch (error) {
       if (_tokenStore?.hasSession == false) return;
-      errorMessage = 'Không tải được danh sách từ ($error).';
+      debugPrint('WordListController: không tải được danh sách ($error).');
+      errorMessage = 'Không tải được danh sách từ. Vui lòng thử lại.';
       status = LoadStatus.failure;
     }
     notifyListeners();

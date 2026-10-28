@@ -199,10 +199,13 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
         );
       }
     } catch (e) {
+      debugPrint('PhraseFormScreen: quét ảnh OCR thất bại ($e).');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi khi quét ảnh OCR: $e'),
+          const SnackBar(
+            content: Text(
+              'Không quét được ảnh. Vui lòng chọn ảnh khác hoặc thử lại.',
+            ),
             backgroundColor: AppTheme.errorRed,
           ),
         );

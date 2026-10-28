@@ -67,9 +67,12 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
           _selectedIndices.addAll(List.generate(result.length, (i) => i));
         });
       }
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      setState(() => _errorMessage = 'Lỗi sinh từ: $e');
+      setState(
+        () => _errorMessage =
+            'Không sinh được từ cho chủ đề này. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
@@ -108,9 +111,12 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
           backgroundColor: AppTheme.successGreen,
         ),
       );
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      setState(() => _errorMessage = 'Lỗi lưu từ: $e');
+      setState(
+        () => _errorMessage =
+            'Không lưu được các từ đã chọn. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

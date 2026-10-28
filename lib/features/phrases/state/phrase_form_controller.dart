@@ -42,7 +42,8 @@ class PhraseFormController extends ChangeNotifier with SafeChangeNotifier {
       errorMessage = error.message;
       return null;
     } catch (e) {
-      errorMessage = 'Lỗi không xác định khi chấm điểm ($e).';
+      debugPrint('PhraseFormController: chấm điểm thất bại ($e).');
+      errorMessage = 'Không chấm được đoạn văn. Vui lòng thử lại.';
       return null;
     } finally {
       isGrading = false;

@@ -150,22 +150,21 @@ class AppConfig {
           } else if (rawErr.contains('Connection refused')) {
             message = 'Từ chối kết nối (Connection Refused): Cổng máy chủ chưa mở hoặc sai IP/cổng.';
           } else {
-            message =
-                'Không thể kết nối tới máy chủ ($rawErr). Vui lòng kiểm tra lại URL hoặc mạng WiFi/4G.';
+            message = 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra lại URL hoặc mạng WiFi/4G.';
           }
           break;
         case DioExceptionType.badCertificate:
           message = 'Lỗi chứng chỉ bảo mật SSL/HTTPS của máy chủ.';
           break;
         default:
-          message = 'Lỗi kết nối: ${e.message ?? 'Không xác định'}';
+          message = 'Lỗi kết nối tới máy chủ.';
       }
       return ConnectionTestResult(isSuccess: false, message: message);
     } catch (e) {
       stopwatch.stop();
-      return ConnectionTestResult(
+      return const ConnectionTestResult(
         isSuccess: false,
-        message: 'Lỗi không xác định ($e).',
+        message: 'Không kiểm tra được kết nối. Vui lòng thử lại.',
       );
     }
   }
