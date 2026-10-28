@@ -165,7 +165,7 @@ class MockPhraseApi implements PhraseApi {
   Future<void> deletePhrase(int id) async {
     await Future.delayed(latency);
     if (!_phrases.containsKey(id)) {
-      throw ApiException(403, 'Không có quyền xóa đoạn văn này.');
+      throw ApiException(404, 'Không tìm thấy đoạn văn cần xóa.');
     }
     _phrases.remove(id);
   }
