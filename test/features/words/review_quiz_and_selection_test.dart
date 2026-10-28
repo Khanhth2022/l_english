@@ -30,54 +30,57 @@ void main() {
       ],
     );
 
-    testWidgets('hiển thị câu hỏi ôn tập với đầy đủ thông tin từ và 4 lựa chọn',
-        (tester) async {
-      tester.view.physicalSize = const Size(1200, 2400);
-      tester.view.devicePixelRatio = 3.0;
-      addTearDown(tester.view.reset);
+    testWidgets(
+      'hiển thị câu hỏi ôn tập với đầy đủ thông tin từ và 4 lựa chọn',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 2400);
+        tester.view.devicePixelRatio = 3.0;
+        addTearDown(tester.view.reset);
 
-      final mockApi = MockWordApi(latency: Duration.zero);
-      final controller = WordListController(mockApi);
+        final mockApi = MockWordApi(latency: Duration.zero);
+        final controller = WordListController(mockApi);
 
-      await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: controller,
-          child: MaterialApp(
-            theme: AppTheme.lightTheme,
-            home: ReviewQuizScreen(
-              words: [sampleDueWord],
-              allWords: [sampleDueWord],
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: controller,
+            child: MaterialApp(
+              theme: AppTheme.lightTheme,
+              home: ReviewQuizScreen(
+                words: [sampleDueWord],
+                allWords: [sampleDueWord],
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('resilient'), findsOneWidget);
-      expect(find.text('/rɪˈzɪl.jənt/'), findsOneWidget);
-      expect(find.text('B2'), findsOneWidget);
-      expect(find.text('Tính từ'), findsOneWidget);
-      expect(find.text('kiên cường, mau phục hồi'), findsOneWidget);
+        expect(find.text('resilient'), findsOneWidget);
+        expect(find.text('/rɪˈzɪl.jənt/'), findsOneWidget);
+        expect(find.text('B2'), findsOneWidget);
+        expect(find.text('Tính từ'), findsOneWidget);
+        expect(find.text('kiên cường, mau phục hồi'), findsOneWidget);
 
-      // Bấm vào đáp án đúng
-      await tester.tap(find.text('kiên cường, mau phục hồi'));
-      await tester.pumpAndSettle();
+        // Bấm vào đáp án đúng
+        await tester.tap(find.text('kiên cường, mau phục hồi'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Chính xác!'), findsOneWidget);
-      expect(find.text('1 đúng'), findsOneWidget);
+        expect(find.text('Chính xác!'), findsOneWidget);
+        expect(find.text('1 đúng'), findsOneWidget);
 
-      // Chuyển sang màn kết quả
-      await tester.tap(find.text('Xem kết quả'));
-      await tester.pumpAndSettle();
+        // Chuyển sang màn kết quả
+        await tester.tap(find.text('Xem kết quả'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Hoàn thành phiên ôn tập!'), findsOneWidget);
-      expect(find.text('1/1'), findsOneWidget);
-      expect(find.text('100%'), findsOneWidget);
-      expect(find.text('Xác nhận & Cập nhật tiến độ'), findsOneWidget);
-    });
+        expect(find.text('Hoàn thành phiên ôn tập!'), findsOneWidget);
+        expect(find.text('1/1'), findsOneWidget);
+        expect(find.text('100%'), findsOneWidget);
+        expect(find.text('Xác nhận & Cập nhật tiến độ'), findsOneWidget);
+      },
+    );
 
-    testWidgets('chọn đáp án không nhớ / xem đáp án vẫn ghi nhận đã ôn từ',
-        (tester) async {
+    testWidgets('xem đáp án không tính là đã ôn và không cập nhật SRS', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1200, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(tester.view.reset);
@@ -111,13 +114,14 @@ void main() {
 
       expect(find.text('0/1'), findsOneWidget);
       expect(find.text('0%'), findsOneWidget);
-      expect(find.text('1 từ'), findsOneWidget); // vẫn cập nhật SRS 1 từ
+      expect(find.text('0 từ'), findsOneWidget); // không cập nhật SRS
     });
   });
 
   group('WordFormScreen với bôi đen từ ngoài (ACT-16)', () {
-    testWidgets('mở form với initialEnglish tự động điền sẵn từ vào ô',
-        (tester) async {
+    testWidgets('mở form với initialEnglish tự động điền sẵn từ vào ô', (
+      tester,
+    ) async {
       final api = MockWordApi(latency: Duration.zero);
 
       await tester.pumpWidget(
@@ -131,13 +135,17 @@ void main() {
       await tester.pumpAndSettle();
 
       final firstTextField = find.byType(TextField).first;
-      expect(tester.widget<TextField>(firstTextField).controller?.text, 'meticulous');
+      expect(
+        tester.widget<TextField>(firstTextField).controller?.text,
+        'meticulous',
+      );
     });
   });
 
   group('WordListScreen Banner & Ôn tập (ACT-15)', () {
-    testWidgets('tab Ôn tập hiển thị Banner Bắt đầu ôn tập khi có từ đến hạn',
-        (tester) async {
+    testWidgets('tab Ôn tập hiển thị Banner Bắt đầu ôn tập khi có từ đến hạn', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1200, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(tester.view.reset);
