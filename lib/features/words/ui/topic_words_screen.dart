@@ -55,8 +55,11 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
     try {
       final api = context.read<WordApi>();
       final result = await api.generateTopicWords(topic);
+      if (!mounted) return;
       if (result.isEmpty) {
-        setState(() => _errorMessage = 'AI không tìm thấy từ mới nào cho chủ đề này hoặc các từ đều đã có trong sổ.');
+        setState(
+          () => _errorMessage = 'AI không tìm thấy từ mới nào cho chủ đề này hoặc các từ đều đã có trong sổ.',
+        );
       } else {
         setState(() {
           _suggestedWords = result;
@@ -65,9 +68,10 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _errorMessage = 'Lỗi sinh từ: $e');
     } finally {
-      setState(() => _isGenerating = false);
+      if (mounted) setState(() => _isGenerating = false);
     }
   }
 
@@ -79,27 +83,33 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
       return;
     }
 
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     setState(() {
       _isSaving = true;
       _errorMessage = null;
     });
 
     try {
-      final selectedList = _selectedIndices.map((i) => _suggestedWords[i]).toList();
+      final selectedList = _selectedIndices
+          .map((i) => _suggestedWords[i])
+          .toList();
       final api = context.read<WordApi>();
       final saved = await api.confirmTopicWords(selectedList);
 
       if (!mounted) return;
       await context.read<WordListController>().load();
       if (!mounted) return;
-      Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(context).showSnackBar(
+      navigator.pop(true);
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Đã thêm ${saved.length} từ mới vào sổ từ của bạn!'),
           backgroundColor: AppTheme.successGreen,
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       setState(() => _errorMessage = 'Lỗi lưu từ: $e');
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -109,9 +119,7 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Thêm từ theo chủ đề (AI)'),
-      ),
+      appBar: AppBar(title: const Text('Thêm từ theo chủ đề (AI)')),
       body: Column(
         children: [
           Expanded(
@@ -128,7 +136,9 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.aiPurple.withValues(alpha: 0.25)),
+                    border: Border.all(
+                      color: AppTheme.aiPurple.withValues(alpha: 0.25),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -138,7 +148,11 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                           color: AppTheme.aiPurple.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.psychology_alt_rounded, color: AppTheme.aiPurple, size: 24),
+                        child: const Icon(
+                          Icons.psychology_alt_rounded,
+                          color: AppTheme.aiPurple,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       const Expanded(
@@ -156,7 +170,10 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                             SizedBox(height: 3),
                             Text(
                               'Tự động lọc bỏ các từ đã có trong sổ từ của bạn để đảm bảo không bị trùng lặp.',
-                              style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted),
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: AppTheme.textMuted,
+                              ),
                             ),
                           ],
                         ),
@@ -173,16 +190,26 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                     decoration: BoxDecoration(
                       color: AppTheme.errorBg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppTheme.errorRed.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: AppTheme.errorRed, size: 20),
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppTheme.errorRed,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: const TextStyle(color: AppTheme.errorRed, fontSize: 13, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              color: AppTheme.errorRed,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -214,7 +241,11 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                         const SizedBox(height: 12),
                         const Text(
                           'Gợi ý nhanh chủ đề:',
-                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textMuted,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
@@ -247,7 +278,10 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                           SizedBox(height: 16),
                           Text(
                             'AI đang phân tích và sinh 10 từ phù hợp...',
-                            style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.aiPurple),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.aiPurple,
+                            ),
                           ),
                         ],
                       ),
@@ -258,21 +292,29 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                     children: [
                       Text(
                         'Danh sách từ đề xuất (${_suggestedWords.length})',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const Spacer(),
                       TextButton(
                         onPressed: () {
                           setState(() {
-                            if (_selectedIndices.length == _suggestedWords.length) {
+                            if (_selectedIndices.length ==
+                                _suggestedWords.length) {
                               _selectedIndices.clear();
                             } else {
-                              _selectedIndices.addAll(List.generate(_suggestedWords.length, (i) => i));
+                              _selectedIndices.addAll(
+                                List.generate(_suggestedWords.length, (i) => i),
+                              );
                             }
                           });
                         },
                         child: Text(
-                          _selectedIndices.length == _suggestedWords.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả',
+                          _selectedIndices.length == _suggestedWords.length
+                              ? 'Bỏ chọn tất cả'
+                              : 'Chọn tất cả',
                         ),
                       ),
                     ],
@@ -299,14 +341,22 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                           children: [
                             Text(
                               draft.english,
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             if (draft.level != null)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                                  color: AppTheme.primaryBlue.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -324,11 +374,17 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 4),
-                            ...draft.values.map((v) => Text(
-                                  '• ${v.vietnamese} ${v.pronunciation != null ? "(${v.pronunciation})" : ""}',
-                                  style: const TextStyle(fontSize: 13, color: AppTheme.textMain),
-                                )),
-                            if (draft.values.isNotEmpty && draft.values.first.example != null) ...[
+                            ...draft.values.map(
+                              (v) => Text(
+                                '• ${v.vietnamese} ${v.pronunciation != null ? "(${v.pronunciation})" : ""}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.textMain,
+                                ),
+                              ),
+                            ),
+                            if (draft.values.isNotEmpty &&
+                                draft.values.first.example != null) ...[
                               const SizedBox(height: 2),
                               Text(
                                 '"${draft.values.first.example!}"',
@@ -368,7 +424,10 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                   children: [
                     Text(
                       'Đã chọn: ${_selectedIndices.length}/${_suggestedWords.length}',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                     ),
                     const Spacer(),
                     ElevatedButton.icon(
@@ -380,7 +439,10 @@ class _TopicWordsScreenState extends State<TopicWordsScreen> {
                           ? const SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : const Icon(Icons.bookmark_add_rounded),
                       label: Text(_isSaving ? 'Đang lưu...' : 'Lưu vào sổ từ'),
