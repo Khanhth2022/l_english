@@ -68,14 +68,16 @@ class AppConfig {
   }
 
   /// Kiểm tra trực tiếp khả năng kết nối tới máy chủ backend.
-  /// Bất kỳ phản hồi HTTP nào (kể cả 401, 400, 200) đều chứng minh máy chủ đang hoạt động.
+  /// Gọi endpoint có thật của LEnglish và chỉ coi là thành công khi nhận được
+  /// phản hồi hợp lệ (2xx, hoặc 401/403 vì chưa gửi token).
   static Future<ConnectionTestResult> testConnection(
     String url, {
     Duration timeout = const Duration(seconds: 6),
   }) async {
     final normalized = normalizeUrl(url);
     if (normalized.isEmpty ||
-        (!normalized.startsWith('http://') && !normalized.startsWith('https://'))) {
+        (!normalized.startsWith('http://') &&
+            !normalized.startsWith('https://'))) {
       return const ConnectionTestResult(
         isSuccess: false,
         message: 'Định dạng URL không hợp lệ.',
@@ -95,28 +97,38 @@ class AppConfig {
 
     final stopwatch = Stopwatch()..start();
     try {
-      final response = await testDio.post<Object?>(
-        '/api/auth/login',
-        data: const <String, dynamic>{},
-      );
+      final response = await testDio.get<Object?>('/api/words');
       stopwatch.stop();
       final latency = stopwatch.elapsedMilliseconds;
+      final status = response.statusCode ?? 0;
+      final reachable =
+          (status >= 200 && status < 400) || status == 401 || status == 403;
+      if (!reachable) {
+        return ConnectionTestResult(
+          isSuccess: false,
+          latencyMs: latency,
+          statusCode: status,
+          message:
+              'Máy chủ phản hồi mã $status — không phải API LEnglish hoặc backend đang lỗi.',
+        );
+      }
       return ConnectionTestResult(
         isSuccess: true,
         latencyMs: latency,
-        statusCode: response.statusCode,
-        message: 'Kết nối thành công (${latency}ms) - Máy chủ Spring Boot phản hồi tốt!',
+        statusCode: status,
+        message:
+            'Kết nối thành công (${latency}ms) - Máy chủ Spring Boot phản hồi tốt!',
       );
     } on DioException catch (e) {
       stopwatch.stop();
       if (e.response != null) {
-        // Có phản hồi từ server nhưng mã lỗi
         final latency = stopwatch.elapsedMilliseconds;
         return ConnectionTestResult(
-          isSuccess: true,
+          isSuccess: false,
           latencyMs: latency,
           statusCode: e.response?.statusCode,
-          message: 'Kết nối thành công (${latency}ms) - Máy chủ phản hồi (${e.response?.statusCode}).',
+          message:
+              'Máy chủ phản hồi lỗi (${e.response?.statusCode}). Kiểm tra lại URL hoặc backend.',
         );
       }
 
@@ -125,18 +137,21 @@ class AppConfig {
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.sendTimeout:
         case DioExceptionType.receiveTimeout:
-          message = 'Hết thời gian chờ kết nối (${timeout.inSeconds}s). Máy chủ phản hồi quá chậm.';
+          message =
+              'Hết thời gian chờ kết nối (${timeout.inSeconds}s). Máy chủ phản hồi quá chậm.';
           break;
         case DioExceptionType.connectionError:
           final rawErr = e.error?.toString() ?? e.message ?? '';
           if (rawErr.contains('XMLHttpRequest') || rawErr.contains('CORS')) {
             message = 'Lỗi CORS trên Trình duyệt: Máy chủ backend chưa bật CORS cho web. Hãy test trên Android hoặc bật CORS ở backend.';
-          } else if (rawErr.contains('Failed host lookup') || rawErr.contains('No address associated')) {
+          } else if (rawErr.contains('Failed host lookup') ||
+              rawErr.contains('No address associated')) {
             message = 'Lỗi DNS: Thiết bị không tìm thấy tên miền này. Mạng WiFi/4G có thể đang chặn Cloudflare tunnel (thử bật 1.1.1.1 hoặc đổi DNS sang 8.8.8.8).';
           } else if (rawErr.contains('Connection refused')) {
             message = 'Từ chối kết nối (Connection Refused): Cổng máy chủ chưa mở hoặc sai IP/cổng.';
           } else {
-            message = 'Không thể kết nối tới máy chủ ($rawErr). Vui lòng kiểm tra lại URL hoặc mạng WiFi/4G.';
+            message =
+                'Không thể kết nối tới máy chủ ($rawErr). Vui lòng kiểm tra lại URL hoặc mạng WiFi/4G.';
           }
           break;
         case DioExceptionType.badCertificate:
@@ -145,10 +160,7 @@ class AppConfig {
         default:
           message = 'Lỗi kết nối: ${e.message ?? 'Không xác định'}';
       }
-      return ConnectionTestResult(
-        isSuccess: false,
-        message: message,
-      );
+      return ConnectionTestResult(isSuccess: false, message: message);
     } catch (e) {
       stopwatch.stop();
       return ConnectionTestResult(
