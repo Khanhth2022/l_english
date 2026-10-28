@@ -82,7 +82,7 @@ class AuthController extends ChangeNotifier with SafeChangeNotifier {
       } catch (_) {}
     }
     await tokenStore.clear();
-    WidgetService.syncWidget(accessToken: '', dueCount: 0);
+    WidgetService.clearWidgetSession();
     notifyListeners();
   }
 

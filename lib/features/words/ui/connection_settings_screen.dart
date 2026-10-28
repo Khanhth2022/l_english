@@ -132,7 +132,7 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
       _accessController.clear();
       _refreshController.clear();
     });
-    await WidgetService.syncWidget(accessToken: '');
+    await WidgetService.clearWidgetSession();
     if (!mounted) return;
     _showMessage('Đã xoá token của phiên.');
   }
