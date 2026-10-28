@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/auth/token_store.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/services/reminder/reminder_service.dart';
 import '../../../core/services/widget/widget_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../phrases/ui/phrase_form_screen.dart';
@@ -19,9 +20,16 @@ class AndroidFeaturesScreen extends StatefulWidget {
 }
 
 class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
-  bool _notificationEnabled = true;
+  bool _notificationEnabled = false;
   TimeOfDay _notificationTime = const TimeOfDay(hour: 20, minute: 0);
+  bool _reminderLoaded = false;
   Future<int>? _dueCountFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReminderSettings();
+  }
 
   @override
   void didChangeDependencies() {
@@ -29,6 +37,70 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
     // Chỉ gọi API một lần; trước đây future được tạo trong build nên mỗi lần
     // rebuild lại bắn thêm request.
     _dueCountFuture ??= context.read<WordApi>().fetchDueCount();
+  }
+
+  Future<void> _loadReminderSettings() async {
+    final settings = await ReminderService.loadSettings();
+    if (!mounted || settings == null) return;
+    setState(() {
+      _notificationEnabled = settings.enabled;
+      _notificationTime = TimeOfDay(
+        hour: settings.hour,
+        minute: settings.minute,
+      );
+      _reminderLoaded = true;
+    });
+  }
+
+  Future<void> _toggleReminder(bool value) async {
+    setState(() => _notificationEnabled = value);
+    final ok = value
+        ? await ReminderService.schedule(
+            hour: _notificationTime.hour,
+            minute: _notificationTime.minute,
+          )
+        : await ReminderService.cancel();
+    if (!mounted) return;
+    if (!ok) {
+      setState(() => _notificationEnabled = !value);
+      _showMessage('Chỉ hỗ trợ lời nhắc trên thiết bị Android.');
+      return;
+    }
+    _showMessage(
+      value
+          ? 'Đã bật nhắc ôn tập lúc ${_formatTime(_notificationTime)} hằng ngày.'
+          : 'Đã tắt nhắc ôn tập.',
+    );
+  }
+
+  Future<void> _pickReminderTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _notificationTime,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _notificationTime = picked);
+    if (!_notificationEnabled) return;
+    final ok = await ReminderService.schedule(
+      hour: picked.hour,
+      minute: picked.minute,
+    );
+    if (!mounted) return;
+    _showMessage(
+      ok
+          ? 'Đã đổi giờ nhắc thành ${_formatTime(picked)} hằng ngày.'
+          : 'Không đặt được giờ nhắc trên thiết bị này.',
+    );
+  }
+
+  String _formatTime(TimeOfDay time) =>
+      '${time.hour.toString().padLeft(2, '0')}:'
+      '${time.minute.toString().padLeft(2, '0')}';
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
   }
 
   void _reloadDueCount() {
@@ -304,7 +376,7 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
             icon: Icons.notifications_active_rounded,
             iconColor: AppTheme.warningOrange,
             title: 'Thông báo ôn tập (act-14)',
-            description: 'WorkManager và NotificationManager nhắc nhở ôn tập Spaced Repetition vào khung giờ cố định trong ngày.',
+            description: 'AlarmManager đánh thức lời nhắc hằng ngày và NotificationManager hiển thị thông báo nhắc ôn tập Spaced Repetition. Lịch được khôi phục sau khi khởi động lại máy.',
             child: Column(
               children: [
                 SwitchListTile(
@@ -314,8 +386,13 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                     'Bật thông báo hằng ngày',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
-                  onChanged: (val) =>
-                      setState(() => _notificationEnabled = val),
+                  subtitle: Text(
+                    _reminderLoaded
+                        ? 'Android sẽ hỏi quyền thông báo khi bật lần đầu.'
+                        : 'Đang đọc cấu hình…',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  onChanged: _reminderLoaded ? _toggleReminder : null,
                 ),
                 if (_notificationEnabled)
                   ListTile(
@@ -325,17 +402,9 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                       style: TextStyle(fontSize: 13.5),
                     ),
                     trailing: TextButton(
-                      onPressed: () async {
-                        final picked = await showTimePicker(
-                          context: context,
-                          initialTime: _notificationTime,
-                        );
-                        if (picked != null) {
-                          setState(() => _notificationTime = picked);
-                        }
-                      },
+                      onPressed: _pickReminderTime,
                       child: Text(
-                        '${_notificationTime.hour.toString().padLeft(2, '0')}:${_notificationTime.minute.toString().padLeft(2, '0')}',
+                        _formatTime(_notificationTime),
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 15,

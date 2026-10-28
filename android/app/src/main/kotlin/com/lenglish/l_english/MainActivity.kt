@@ -1,9 +1,11 @@
 package com.lenglish.l_english
 
+import android.Manifest
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
@@ -14,14 +16,17 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         const val CHANNEL = "com.lenglish.l_english/widget"
+        const val CHANNEL_REMINDER = "com.lenglish.l_english/reminder"
         const val EXTRA_ROUTE = "extra_route"
         const val ROUTE_DUE_WORDS = "due_words"
         const val ACTION_OPEN_DUE_WORDS = "com.lenglish.l_english.ACTION_OPEN_DUE_WORDS"
+        private const val REQUEST_POST_NOTIFICATIONS = 1402
     }
 
     private var initialRoute: String? = null
     private var initialProcessText: String? = null
     private var methodChannel: MethodChannel? = null
+    private var reminderChannel: MethodChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,6 +86,57 @@ class MainActivity : FlutterActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+
+        reminderChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            CHANNEL_REMINDER
+        )
+        reminderChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "scheduleReminder" -> {
+                    val hour = call.argument<Int>("hour") ?: 20
+                    val minute = call.argument<Int>("minute") ?: 0
+                    requestNotificationPermissionIfNeeded()
+                    ReminderScheduler.schedule(context, hour, minute)
+                    result.success(true)
+                }
+                "cancelReminder" -> {
+                    ReminderScheduler.cancel(context)
+                    result.success(true)
+                }
+                "getReminderSettings" -> {
+                    result.success(ReminderScheduler.readSettings(context))
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        requestPermissions(
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            REQUEST_POST_NOTIFICATIONS
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_POST_NOTIFICATIONS &&
+            grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+        ) {
+            // Người dùng vừa cấp quyền: đặt lại alarm để lời nhắc kế tiếp hiển thị.
+            ReminderScheduler.rescheduleIfEnabled(this)
         }
     }
 
