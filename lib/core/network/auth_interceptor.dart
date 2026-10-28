@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../auth/token_store.dart';
 import '../config/app_config.dart';
+import '../services/widget/widget_service.dart';
 
 /// Gắn JWT vào mọi request và tự làm mới token khi gặp 401.
 ///
@@ -113,6 +114,12 @@ class AuthInterceptor extends Interceptor {
               ? newRefresh
               : refreshToken,
         ),
+      );
+      // Widget đọc token riêng: không đồng bộ lại thì widget sẽ dùng token cũ
+      // và nhận 401 sau khi access token được xoay vòng.
+      await WidgetService.syncWidget(
+        accessToken: newAccess,
+        baseUrl: AppConfig.apiBaseUrl,
       );
       return newAccess;
     } on DioException catch (error) {
