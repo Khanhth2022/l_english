@@ -1,0 +1,6 @@
+# Sao chép file này thành android/key.properties rồi điền thông tin keystore.
+# Không commit key.properties hay file .jks lên git.
+storePassword=mat_khau_keystore
+keyPassword=mat_khau_key
+keyAlias=lenglish
+storeFile=release-keystore.jks
