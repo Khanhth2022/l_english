@@ -31,16 +31,13 @@ class AuthInterceptor extends Interceptor {
   final String refreshPath;
 
   static const String _retriedFlag = 'authRetried';
-  static const String _skipAuthFlag = 'skipAuth';
 
   Future<String?>? _refreshing;
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final token = tokenStore.tokens?.accessToken;
-    if (token != null &&
-        token.isNotEmpty &&
-        options.extra[_skipAuthFlag] != true) {
+    if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
     handler.next(options);
