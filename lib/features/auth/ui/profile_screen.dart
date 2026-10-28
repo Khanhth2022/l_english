@@ -150,7 +150,7 @@ class ProfileScreen extends StatelessWidget {
 
           Center(
             child: Text(
-              'LEnglish App v1.0.0 • Bám sát tài liệu thiết kế',
+              'LEnglish App v1.0.1 • Bám sát tài liệu thiết kế',
               style: TextStyle(fontSize: 12, color: AppTheme.textMuted.withValues(alpha: 0.7)),
             ),
           ),
@@ -163,9 +163,16 @@ class ProfileScreen extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.textMuted)),
-        const Spacer(),
         Flexible(
+          flex: 4,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          flex: 6,
           child: Text(
             value,
             textAlign: TextAlign.right,
