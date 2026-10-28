@@ -396,6 +396,7 @@ class _WordListViewState extends State<_WordListView>
     return RefreshIndicator(
       onRefresh: controller.load,
       child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 96),
         itemCount: words.length,
         itemBuilder: (context, index) {

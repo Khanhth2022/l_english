@@ -108,6 +108,7 @@ class PhraseListScreen extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: controller.load,
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
         children: [
           // Thống kê tổng quan
