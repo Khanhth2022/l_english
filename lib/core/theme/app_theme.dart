@@ -40,7 +40,6 @@ class AppTheme {
         brightness: Brightness.light,
       ),
       scaffoldBackgroundColor: surfaceLight,
-      fontFamily: 'Segoe UI',
     );
 
     return base.copyWith(
