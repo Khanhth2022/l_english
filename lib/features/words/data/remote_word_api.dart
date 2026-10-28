@@ -42,7 +42,10 @@ class RemoteWordApi implements WordApi {
     if (data is Map && data['dueCount'] is num) {
       return (data['dueCount'] as num).toInt();
     }
-    return 0;
+    throw ApiException(
+      0,
+      'Máy chủ trả về số từ cần ôn không đúng định dạng.',
+    );
   });
 
   @override
