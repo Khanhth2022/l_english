@@ -12,11 +12,7 @@ import 'widgets/phrase_detail_sheet.dart';
 /// Màn hình nhập và gửi đoạn văn bản để AI chấm điểm (act-11, seq-11, seq-12),
 /// tích hợp Quét OCR lấy văn bản từ ảnh on-device (act-17, seq-17).
 class PhraseFormScreen extends StatelessWidget {
-  const PhraseFormScreen({
-    super.key,
-    this.initialText,
-    this.autoScan = false,
-  });
+  const PhraseFormScreen({super.key, this.initialText, this.autoScan = false});
 
   final String? initialText;
   final bool autoScan;
@@ -89,7 +85,11 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                     color: AppTheme.aiPurple.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.document_scanner_rounded, color: AppTheme.aiPurple, size: 22),
+                  child: const Icon(
+                    Icons.document_scanner_rounded,
+                    color: AppTheme.aiPurple,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -111,18 +111,33 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                 backgroundColor: AppTheme.aiBg,
                 child: Icon(Icons.camera_alt_rounded, color: AppTheme.aiPurple),
               ),
-              title: const Text('Chụp ảnh mới bằng Camera', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-              subtitle: const Text('Chụp đề bài, sách hoặc tài liệu tiếng Anh', style: TextStyle(fontSize: 12.5)),
+              title: const Text(
+                'Chụp ảnh mới bằng Camera',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              subtitle: const Text(
+                'Chụp đề bài, sách hoặc tài liệu tiếng Anh',
+                style: TextStyle(fontSize: 12.5),
+              ),
               onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
             ),
             const SizedBox(height: 6),
             ListTile(
               leading: const CircleAvatar(
                 backgroundColor: AppTheme.aiBg,
-                child: Icon(Icons.photo_library_rounded, color: AppTheme.aiPurple),
+                child: Icon(
+                  Icons.photo_library_rounded,
+                  color: AppTheme.aiPurple,
+                ),
               ),
-              title: const Text('Chọn ảnh từ Thư viện (Gallery)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-              subtitle: const Text('Chọn ảnh chụp màn hình hoặc tài liệu có sẵn', style: TextStyle(fontSize: 12.5)),
+              title: const Text(
+                'Chọn ảnh từ Thư viện (Gallery)',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              subtitle: const Text(
+                'Chọn ảnh chụp màn hình hoặc tài liệu có sẵn',
+                style: TextStyle(fontSize: 12.5),
+              ),
               onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
             ),
           ],
@@ -145,7 +160,14 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
         const SnackBar(
           content: Row(
             children: [
-              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
               SizedBox(width: 12),
               Text('Đang tiền xử lý ảnh & chạy ML Kit OCR...'),
             ],
@@ -169,7 +191,9 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
         controller.setText(extractedText.trim());
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Đã trích xuất ${extractedText.trim().length} ký tự từ ảnh thành công.'),
+            content: Text(
+              'Đã trích xuất ${extractedText.trim().length} ký tự từ ảnh thành công.',
+            ),
             backgroundColor: AppTheme.successGreen,
           ),
         );
@@ -228,7 +252,9 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.aiPurple.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppTheme.aiPurple.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
@@ -238,7 +264,11 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                       color: AppTheme.aiPurple.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.auto_awesome, color: AppTheme.aiPurple, size: 24),
+                    child: const Icon(
+                      Icons.auto_awesome,
+                      color: AppTheme.aiPurple,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   const Expanded(
@@ -256,7 +286,10 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                         SizedBox(height: 3),
                         Text(
                           'Nhập đoạn văn hoặc quét từ ảnh để chấm điểm thang 10, chỉ ra lỗi sai và câu sửa chuẩn.',
-                          style: TextStyle(fontSize: 12.5, color: AppTheme.textMuted),
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: AppTheme.textMuted,
+                          ),
                         ),
                       ],
                     ),
@@ -273,11 +306,17 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                 decoration: BoxDecoration(
                   color: AppTheme.errorBg,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppTheme.errorRed.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: AppTheme.errorRed, size: 20),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppTheme.errorRed,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -305,7 +344,6 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                       controller: controller.textController,
                       maxLines: 8,
                       minLines: 5,
-                      onChanged: (_) => (context as Element).markNeedsBuild(),
                       decoration: const InputDecoration(
                         hintText: 'Nhập câu hoặc đoạn văn tiếng Anh của bạn tại đây, hoặc bấm Quét ảnh (OCR)...',
                         border: InputBorder.none,
@@ -317,15 +355,23 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                     const Divider(height: 24),
                     Row(
                       children: [
-                        Text(
-                          '${controller.characterCount} ký tự',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: controller.characterCount < 10
-                                ? AppTheme.errorRed
-                                : AppTheme.textMuted,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        // Đếm ký tự theo nội dung ô nhập, không cần ép cả màn
+                        // hình build lại bằng markNeedsBuild.
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: controller.textController,
+                          builder: (context, value, _) {
+                            final count = value.text.trim().length;
+                            return Text(
+                              '$count ký tự',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: count < 10
+                                    ? AppTheme.errorRed
+                                    : AppTheme.textMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(width: 6),
                         Expanded(
@@ -336,33 +382,56 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 OutlinedButton.icon(
-                                  onPressed: (_isProcessingOcr || controller.isGrading)
+                                  onPressed:
+                                      (_isProcessingOcr || controller.isGrading)
                                       ? null
                                       : () => _scanOcr(controller),
                                   icon: _isProcessingOcr
                                       ? const SizedBox(
                                           width: 14,
                                           height: 14,
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.aiPurple),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppTheme.aiPurple,
+                                          ),
                                         )
-                                      : const Icon(Icons.document_scanner_rounded, size: 15),
-                                  label: Text(_isProcessingOcr ? 'Đang quét…' : 'Quét ảnh (OCR)'),
+                                      : const Icon(
+                                          Icons.document_scanner_rounded,
+                                          size: 15,
+                                        ),
+                                  label: Text(
+                                    _isProcessingOcr
+                                        ? 'Đang quét…'
+                                        : 'Quét ảnh (OCR)',
+                                  ),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: AppTheme.aiPurple,
-                                    side: const BorderSide(color: AppTheme.aiPurple),
+                                    side: const BorderSide(
+                                      color: AppTheme.aiPurple,
+                                    ),
                                     visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     textStyle: const TextStyle(fontSize: 12),
                                   ),
                                 ),
                                 const SizedBox(width: 6),
                                 TextButton.icon(
-                                  onPressed: () => _showQuickTemplates(context, controller),
-                                  icon: const Icon(Icons.lightbulb_outline, size: 16),
+                                  onPressed: () =>
+                                      _showQuickTemplates(context, controller),
+                                  icon: const Icon(
+                                    Icons.lightbulb_outline,
+                                    size: 16,
+                                  ),
                                   label: const Text('Mẫu câu'),
                                   style: TextButton.styleFrom(
                                     visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 4,
+                                    ),
                                     textStyle: const TextStyle(fontSize: 12),
                                   ),
                                 ),
@@ -380,7 +449,9 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
 
             // Submit Button
             ElevatedButton(
-              onPressed: controller.isGrading ? null : () => _submit(context, controller),
+              onPressed: controller.isGrading
+                  ? null
+                  : () => _submit(context, controller),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.aiPurple,
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -392,7 +463,10 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                         SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         ),
                         SizedBox(width: 12),
                         Text('AI đang chấm điểm & phân tích...'),
@@ -405,7 +479,10 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                         SizedBox(width: 8),
                         Text(
                           'Chấm điểm & Sửa lỗi',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     ),
@@ -416,7 +493,10 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
     );
   }
 
-  void _showQuickTemplates(BuildContext context, PhraseFormController controller) {
+  void _showQuickTemplates(
+    BuildContext context,
+    PhraseFormController controller,
+  ) {
     showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -433,23 +513,31 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
-            ..._samplePhrases.map((phrase) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.article_outlined, color: AppTheme.primaryBlue),
-                  title: Text(phrase, style: const TextStyle(fontSize: 13.5)),
-                  onTap: () {
-                    controller.setText(phrase);
-                    Navigator.of(ctx).pop();
-                  },
-                )),
+            ..._samplePhrases.map(
+              (phrase) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(
+                  Icons.article_outlined,
+                  color: AppTheme.primaryBlue,
+                ),
+                title: Text(phrase, style: const TextStyle(fontSize: 13.5)),
+                onTap: () {
+                  controller.setText(phrase);
+                  Navigator.of(ctx).pop();
+                },
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _submit(BuildContext context, PhraseFormController controller) async {
+  Future<void> _submit(
+    BuildContext context,
+    PhraseFormController controller,
+  ) async {
     final result = await controller.submitForGrading();
     if (result != null && context.mounted) {
       try {
