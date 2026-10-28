@@ -76,7 +76,8 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
     Word? existing,
     String? initialEnglish,
   }) : _existing = existing {
-    englishController.text = existing?.english ?? (initialEnglish?.trim() ?? '');
+    englishController.text =
+        existing?.english ?? (initialEnglish?.trim() ?? '');
     level = existing?.level;
     rows = (existing == null || existing.values.isEmpty)
         ? [WordValueRow()]
@@ -165,6 +166,9 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
         .map((row) => row.toValue())
         .toList();
     if (values.isEmpty) return 'Cần ít nhất một nghĩa tiếng Việt.';
+    if (values.any((value) => value.vietnamese.isEmpty)) {
+      return 'Mỗi nghĩa cần có nội dung tiếng Việt.';
+    }
 
     saving = true;
     notifyListeners();

@@ -107,22 +107,33 @@ class _WordFormView extends StatelessWidget {
                       )
                     : const Icon(Icons.auto_awesome),
                 label: Text(
-                  controller.generating ? 'Đang nhờ AI…' : 'Gợi ý nghĩa bằng AI',
+                  controller.generating
+                      ? 'Đang nhờ AI…'
+                      : 'Gợi ý nghĩa bằng AI',
                 ),
               ),
             ),
             if (controller.notice != null) ...[
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.aiBg,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.aiPurple.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: AppTheme.aiPurple.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.auto_awesome, size: 16, color: AppTheme.aiPurple),
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: AppTheme.aiPurple,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -144,10 +155,7 @@ class _WordFormView extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'Nghĩa của từ',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -176,7 +184,9 @@ class _WordFormView extends StatelessWidget {
             FilledButton.icon(
               onPressed: controller.saving ? null : () => _save(context),
               icon: const Icon(Icons.save_outlined),
-              label: Text(controller.isEditing ? 'Cập nhật từ' : 'Thêm vào sổ từ'),
+              label: Text(
+                controller.isEditing ? 'Cập nhật từ' : 'Thêm vào sổ từ',
+              ),
             ),
           ],
         ),
@@ -200,6 +210,32 @@ class _WordFormView extends StatelessWidget {
 
   Future<void> _generate(BuildContext context) async {
     final controller = context.read<WordFormController>();
+
+    final hasManualValues = controller.rows.any((row) => !row.isBlank);
+    if (hasManualValues) {
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Thay thế nghĩa đã nhập?'),
+          content: const Text(
+            'AI sẽ xoá các dòng nghĩa hiện có và điền nghĩa mới. '
+            'Bạn có muốn tiếp tục?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Giữ nguyên'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Thay thế'),
+            ),
+          ],
+        ),
+      );
+      if (replace != true) return;
+    }
+
     final error = await controller.generateMeaning();
     if (!context.mounted || error == null) return;
     _showMessage(context, error, isError: true);
