@@ -21,15 +21,26 @@ class AndroidFeaturesScreen extends StatefulWidget {
 class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
   bool _notificationEnabled = true;
   TimeOfDay _notificationTime = const TimeOfDay(hour: 20, minute: 0);
+  Future<int>? _dueCountFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Chỉ gọi API một lần; trước đây future được tạo trong build nên mỗi lần
+    // rebuild lại bắn thêm request.
+    _dueCountFuture ??= context.read<WordApi>().fetchDueCount();
+  }
+
+  void _reloadDueCount() {
+    setState(() {
+      _dueCountFuture = context.read<WordApi>().fetchDueCount();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final wordApi = context.read<WordApi>();
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tiện ích & Tích hợp Android'),
-      ),
+      appBar: AppBar(title: const Text('Tiện ích & Tích hợp Android')),
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [
@@ -52,7 +63,11 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                     color: Colors.green.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.android_rounded, color: Colors.green, size: 32),
+                  child: const Icon(
+                    Icons.android_rounded,
+                    color: Colors.green,
+                    size: 32,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 const Expanded(
@@ -70,7 +85,10 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                       SizedBox(height: 4),
                       Text(
                         'Quét ảnh OCR, Widget màn hình chính, Thông báo ôn tập ngầm, Thêm từ qua bộ chọn văn bản.',
-                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12.5),
+                        style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 12.5,
+                        ),
                       ),
                     ],
                   ),
@@ -96,14 +114,16 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
               },
               icon: const Icon(Icons.document_scanner_rounded, size: 18),
               label: const Text('Quét ảnh vào ô Chấm bài'),
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.aiPurple),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.aiPurple,
+              ),
             ),
           ),
           const SizedBox(height: 16),
 
           // Tính năng 2: Widget Màn hình chính (act-15, seq-15)
           FutureBuilder<int>(
-            future: wordApi.fetchDueCount(),
+            future: _dueCountFuture,
             builder: (context, snapshot) {
               final dueCount = snapshot.data ?? 0;
               return _buildFeatureCard(
@@ -135,13 +155,17 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                     ),
                     ElevatedButton.icon(
                       onPressed: () async {
-                        final token = context.read<TokenStore>().tokens?.accessToken;
+                        final token = context
+                            .read<TokenStore>()
+                            .tokens
+                            ?.accessToken;
                         final ok = await WidgetService.syncWidget(
                           dueCount: dueCount,
                           accessToken: token,
                           baseUrl: AppConfig.apiBaseUrl,
                         );
                         if (context.mounted) {
+                          _reloadDueCount();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -156,7 +180,9 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                       },
                       icon: const Icon(Icons.sync_rounded, size: 18),
                       label: const Text('Đồng bộ ngay'),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                      ),
                     ),
                   ],
                 ),
@@ -176,10 +202,16 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryBlue.withValues(alpha: 0.12),
+                              color: AppTheme.primaryBlue.withValues(
+                                alpha: 0.12,
+                              ),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.auto_stories, color: AppTheme.primaryBlue, size: 24),
+                            child: const Icon(
+                              Icons.auto_stories,
+                              color: AppTheme.primaryBlue,
+                              size: 24,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -188,16 +220,27 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                               children: [
                                 const Text(
                                   'LEnglish • Ôn tập',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textMuted,
+                                  ),
                                 ),
                                 Text(
                                   '$dueCount từ cần ôn lại hôm nay',
-                                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: AppTheme.textMain),
+                                  style: const TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.textMain,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: AppTheme.textMuted,
+                          ),
                         ],
                       ),
                     ),
@@ -207,19 +250,29 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                       decoration: BoxDecoration(
                         color: Colors.blue.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.blue.withValues(alpha: 0.15)),
+                        border: Border.all(
+                          color: Colors.blue.withValues(alpha: 0.15),
+                        ),
                       ),
                       child: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.info_outline_rounded, size: 16, color: AppTheme.primaryBlue),
+                              Icon(
+                                Icons.info_outline_rounded,
+                                size: 16,
+                                color: AppTheme.primaryBlue,
+                              ),
                               SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   'Cách thêm Widget ra màn hình chính Android:',
-                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.primaryBlue),
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.primaryBlue,
+                                  ),
                                 ),
                               ),
                             ],
@@ -230,7 +283,11 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                             '2. Chọn mục "Tiện ích" (Widgets) -> Tìm ứng dụng "LEnglish".\n'
                             '3. Nhấn giữ tiện ích "LEnglish • Ôn tập SRS" và kéo ra vị trí mong muốn.\n'
                             '4. Chạm vào widget ngoài màn hình sẽ mở thẳng vào tab Ôn tập.',
-                            style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.45),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: AppTheme.textMuted,
+                              height: 1.45,
+                            ),
                           ),
                         ],
                       ),
@@ -253,13 +310,20 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _notificationEnabled,
-                  title: const Text('Bật thông báo hằng ngày', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                  onChanged: (val) => setState(() => _notificationEnabled = val),
+                  title: const Text(
+                    'Bật thông báo hằng ngày',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  onChanged: (val) =>
+                      setState(() => _notificationEnabled = val),
                 ),
                 if (_notificationEnabled)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Giờ nhận thông báo', style: TextStyle(fontSize: 13.5)),
+                    title: const Text(
+                      'Giờ nhận thông báo',
+                      style: TextStyle(fontSize: 13.5),
+                    ),
                     trailing: TextButton(
                       onPressed: () async {
                         final picked = await showTimePicker(
@@ -272,7 +336,10 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                       },
                       child: Text(
                         '${_notificationTime.hour.toString().padLeft(2, '0')}:${_notificationTime.minute.toString().padLeft(2, '0')}',
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                   ),
@@ -299,12 +366,20 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.touch_app_rounded, size: 16, color: AppTheme.successGreen),
+                      Icon(
+                        Icons.touch_app_rounded,
+                        size: 16,
+                        color: AppTheme.successGreen,
+                      ),
                       SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           'Cách sử dụng trên Android:',
-                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.successGreen),
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.successGreen,
+                          ),
                         ),
                       ),
                     ],
@@ -315,7 +390,11 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                     '2. Bôi đen từ tiếng Anh bạn muốn tra (ví dụ: resilient).\n'
                     '3. Trên thanh công cụ nổi (sát Sao chép / Chia sẻ), chọn "Thêm vào LEnglish".\n'
                     '4. LEnglish tự động mở ra với từ đã điền sẵn, sẵn sàng để AI sinh nghĩa và lưu.',
-                    style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.45),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppTheme.textMuted,
+                      height: 1.45,
+                    ),
                   ),
                 ],
               ),
@@ -324,12 +403,14 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
               onPressed: () async {
                 final changed = await Navigator.of(context).push<bool>(
                   MaterialPageRoute(
-                    builder: (_) => const WordFormScreen(initialEnglish: 'resilient'),
+                    builder: (_) =>
+                        const WordFormScreen(initialEnglish: 'resilient'),
                   ),
                 );
                 if (changed == true && context.mounted) {
                   try {
                     await context.read<WordListController>().load();
+                    _reloadDueCount();
                   } catch (_) {}
                 }
               },
@@ -371,7 +452,10 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -379,12 +463,13 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
             const SizedBox(height: 8),
             Text(
               description,
-              style: const TextStyle(fontSize: 13, color: AppTheme.textMuted, height: 1.4),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppTheme.textMuted,
+                height: 1.4,
+              ),
             ),
-            if (child != null) ...[
-              const SizedBox(height: 10),
-              child,
-            ],
+            if (child != null) ...[const SizedBox(height: 10), child],
             if (action != null) ...[
               const SizedBox(height: 14),
               Align(alignment: Alignment.centerRight, child: action),
@@ -394,5 +479,4 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
       ),
     );
   }
-
 }
