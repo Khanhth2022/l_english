@@ -115,9 +115,15 @@ class AuthInterceptor extends Interceptor {
         ),
       );
       return newAccess;
+    } on DioException catch (error) {
+      // Chỉ xoá phiên khi máy chủ từ chối refresh token. Lỗi mạng/timeout
+      // không có nghĩa là phiên hết hạn, xoá sẽ đăng xuất người dùng oan.
+      final status = error.response?.statusCode;
+      if (status == 401 || status == 403) {
+        await tokenStore.clear();
+      }
+      return null;
     } catch (_) {
-      // Refresh token hết hạn hoặc đã bị thu hồi → xoá phiên hiện tại.
-      await tokenStore.clear();
       return null;
     }
   }
