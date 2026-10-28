@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,8 +20,13 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController = TabController(length: 2, vsync: this);
 
-  final _loginUsernameController = TextEditingController(text: 'user1');
-  final _loginPasswordController = TextEditingController(text: 'password123');
+  // Chỉ điền sẵn tài khoản mẫu khi chạy debug, bản phát hành để trống.
+  final _loginUsernameController = TextEditingController(
+    text: kDebugMode ? 'user1' : '',
+  );
+  final _loginPasswordController = TextEditingController(
+    text: kDebugMode ? 'password123' : '',
+  );
 
   final _registerUsernameController = TextEditingController();
   final _registerPasswordController = TextEditingController();
