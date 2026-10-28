@@ -422,7 +422,7 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
             icon: Icons.text_fields_rounded,
             iconColor: AppTheme.successGreen,
             title: 'Thêm từ từ bộ chọn văn bản (act-16)',
-            description: 'Bôi đen bất kỳ từ hoặc câu tiếng Anh nào trên trình duyệt, PDF, hoặc ứng dụng khác; chọn "Thêm vào LEnglish" để tự động điền và tạo nghĩa bằng AI.',
+            description: 'Bôi đen bất kỳ từ hoặc câu tiếng Anh nào trên trình duyệt, PDF, hoặc ứng dụng khác; chọn "Thêm vào LEnglish" để mở form đã điền sẵn từ, sau đó bấm "Sinh nghĩa bằng AI" nếu muốn điền nghĩa tự động.',
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -458,7 +458,7 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                     '1. Mở bất kỳ ứng dụng nào (Chrome, Báo tiếng Anh, Facebook, PDF...)\n'
                     '2. Bôi đen từ tiếng Anh bạn muốn tra (ví dụ: resilient).\n'
                     '3. Trên thanh công cụ nổi (sát Sao chép / Chia sẻ), chọn "Thêm vào LEnglish".\n'
-                    '4. LEnglish tự động mở ra với từ đã điền sẵn, sẵn sàng để AI sinh nghĩa và lưu.',
+                    '4. LEnglish mở form với từ đã điền sẵn; bấm "Sinh nghĩa bằng AI" để tạo nghĩa rồi lưu.',
                     style: TextStyle(
                       fontSize: 11.5,
                       color: AppTheme.textMuted,
