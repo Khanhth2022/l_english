@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:l_english/core/auth/token_store.dart';
 import 'package:l_english/core/network/api_exception.dart';
 import 'package:l_english/features/words/data/mock_word_api.dart';
 import 'package:l_english/features/words/data/models/word.dart';
@@ -110,7 +111,11 @@ void main() {
     expect(controller.selectedCount, 1);
 
     controller.setOnlyDue(false);
-    expect(controller.selectedCount, 0, reason: 'rời tab Ôn tập thì bỏ chọn hết');
+    expect(
+      controller.selectedCount,
+      0,
+      reason: 'rời tab Ôn tập thì bỏ chọn hết',
+    );
   });
 
   test('xoá từ thành công thì bỏ khỏi danh sách', () async {
@@ -124,15 +129,18 @@ void main() {
     expect(controller.words.any((word) => word.id == target.id), isFalse);
   });
 
-  test('xoá từ thất bại thì trả thông báo lỗi và giữ nguyên danh sách', () async {
-    final failing = WordListController(_FailingWordApi());
-    addTearDown(failing.dispose);
-    const word = Word(id: 9, english: 'ghost');
+  test(
+    'xoá từ thất bại thì trả thông báo lỗi và giữ nguyên danh sách',
+    () async {
+      final failing = WordListController(_FailingWordApi());
+      addTearDown(failing.dispose);
+      const word = Word(id: 9, english: 'ghost');
 
-    final error = await failing.deleteWord(word);
+      final error = await failing.deleteWord(word);
 
-    expect(error, 'Không tìm thấy từ này trong sổ từ của bạn.');
-  });
+      expect(error, 'Không tìm thấy từ này trong sổ từ của bạn.');
+    },
+  );
 
   test('xác nhận ôn tập khi chưa chọn gì thì báo lỗi', () async {
     await controller.load();
@@ -154,11 +162,28 @@ void main() {
     expect(controller.submitting, isFalse);
     expect(controller.selectedCount, 0);
 
-    final updated = controller.words.firstWhere(
-      (w) => w.id == achieve.id,
-    );
+    final updated = controller.words.firstWhere((w) => w.id == achieve.id);
     expect(updated.reviewCount, achieve.reviewCount + 1);
     expect(updated.isDue(DateTime.now()), isFalse);
     expect(controller.dueCount, 1, reason: 'chỉ còn từ mới curious đến hạn');
+  });
+
+  test('đăng xuất thì xoá dữ liệu của phiên trước', () async {
+    final tokenStore = InMemoryTokenStore();
+    await tokenStore.save(
+      const TokenPair(accessToken: 'access', refreshToken: 'refresh'),
+      username: 'user1',
+    );
+    final scoped = WordListController(api, tokenStore: tokenStore);
+    addTearDown(scoped.dispose);
+
+    await scoped.load();
+    expect(scoped.words, isNotEmpty);
+
+    await tokenStore.clear();
+
+    expect(scoped.words, isEmpty);
+    expect(scoped.status, LoadStatus.idle);
+    expect(scoped.selectedCount, 0);
   });
 }

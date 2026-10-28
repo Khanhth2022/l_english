@@ -45,16 +45,17 @@ class LEnglishApp extends StatelessWidget {
         Provider<AuthApi>.value(value: effectiveAuthApi),
         Provider<PhraseApi>.value(value: effectivePhraseApi),
         ChangeNotifierProvider<AuthController>(
-          create: (ctx) => AuthController(
-            api: effectiveAuthApi,
-            tokenStore: tokenStore,
-          ),
+          create: (ctx) =>
+              AuthController(api: effectiveAuthApi, tokenStore: tokenStore),
         ),
         ChangeNotifierProvider<WordListController>(
-          create: (ctx) => WordListController(wordApi)..load(),
+          create: (ctx) =>
+              WordListController(wordApi, tokenStore: tokenStore)..load(),
         ),
         ChangeNotifierProvider<PhraseListController>(
-          create: (ctx) => PhraseListController(effectivePhraseApi)..load(),
+          create: (ctx) =>
+              PhraseListController(effectivePhraseApi, tokenStore: tokenStore)
+                ..load(),
         ),
       ],
       child: MaterialApp(

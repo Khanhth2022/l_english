@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../core/auth/token_store.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/services/widget/widget_service.dart';
 import '../../../core/state/safe_change_notifier.dart';
@@ -15,11 +16,20 @@ enum LoadStatus { idle, loading, success, failure }
 /// Tài liệu thiết kế: danh sách từ chỉ tải một lần, tab "Ôn tập" lọc lại trên
 /// chính dữ liệu đã tải (`next_review <= now`) nên không có API riêng.
 class WordListController extends ChangeNotifier with SafeChangeNotifier {
-  WordListController(this._api, {DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+  WordListController(
+    this._api, {
+    TokenStore? tokenStore,
+    DateTime Function()? clock,
+  }) : _tokenStore = tokenStore,
+       _lastLoggedIn = tokenStore?.hasSession ?? true,
+       _clock = clock ?? DateTime.now {
+    _tokenStore?.addListener(_onSessionChanged);
+  }
 
   final WordApi _api;
+  final TokenStore? _tokenStore;
   final DateTime Function() _clock;
+  bool _lastLoggedIn;
 
   LoadStatus status = LoadStatus.idle;
   String? errorMessage;
@@ -60,20 +70,48 @@ class WordListController extends ChangeNotifier with SafeChangeNotifier {
 
   bool isSelected(int id) => _selected.contains(id);
 
+  void _onSessionChanged() {
+    final loggedIn = _tokenStore!.hasSession;
+    if (loggedIn == _lastLoggedIn) return;
+    _lastLoggedIn = loggedIn;
+    if (loggedIn) {
+      load();
+    } else {
+      reset();
+    }
+  }
+
+  /// Xoá sạch dữ liệu của phiên trước khi đăng xuất.
+  void reset() {
+    _words = const [];
+    _selected.clear();
+    status = LoadStatus.idle;
+    errorMessage = null;
+    query = '';
+    onlyDue = false;
+    submitting = false;
+    notifyListeners();
+  }
+
   Future<void> load() async {
     status = LoadStatus.loading;
     errorMessage = null;
     notifyListeners();
     try {
-      _words = await _api.fetchWords();
+      final words = await _api.fetchWords();
+      // Người dùng đã đăng xuất trong lúc chờ: bỏ kết quả của phiên cũ.
+      if (_tokenStore?.hasSession == false) return;
+      _words = words;
       // Bỏ chọn những từ đã bị xoá ở nơi khác.
       _selected.removeWhere((id) => !_words.any((word) => word.id == id));
       status = LoadStatus.success;
       WidgetService.syncWidget(dueCount: dueCount);
     } on ApiException catch (error) {
+      if (_tokenStore?.hasSession == false) return;
       errorMessage = error.message;
       status = LoadStatus.failure;
     } catch (error) {
+      if (_tokenStore?.hasSession == false) return;
       errorMessage = 'Không tải được danh sách từ ($error).';
       status = LoadStatus.failure;
     }
@@ -139,4 +177,10 @@ class WordListController extends ChangeNotifier with SafeChangeNotifier {
 
   /// Ghi nhận đã ôn các từ đang được chọn rồi tải lại danh sách.
   Future<String?> confirmReview() => confirmReviewWords(_selected.toList());
+
+  @override
+  void dispose() {
+    _tokenStore?.removeListener(_onSessionChanged);
+    super.dispose();
+  }
 }
