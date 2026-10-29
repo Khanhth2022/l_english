@@ -14,6 +14,9 @@ Dio createApiClient(TokenStore tokenStore) {
     receiveTimeout: AppConfig.receiveTimeout,
     contentType: Headers.jsonContentType,
     responseType: ResponseType.json,
+    // Tunnel ngrok bản miễn phí chèn trang cảnh báo HTML cho request có
+    // User-Agent trình duyệt; header này bỏ qua trang đó để nhận JSON thật.
+    headers: const {'ngrok-skip-browser-warning': 'true'},
     // Chỉ 2xx là thành công; các mã khác đi vào onError để map sang ApiException.
     validateStatus: (status) =>
         status != null && status >= 200 && status < 300,

@@ -142,7 +142,7 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
 * **Chạy kết nối Backend Spring Boot thật:**
   * Với Backend qua Cloudflare Tunnel (chạy trên Máy ảo Android):
     ```bash
-    flutter run -d android --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://neighborhood-compliance-gratis-sensors.trycloudflare.com
+    flutter run -d android --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://kristal-nondichotomous-conclusionally.ngrok-free.dev
     ```
   * Với Android Emulator nội bộ (`10.0.2.2` trỏ về localhost máy chủ):
     ```bash

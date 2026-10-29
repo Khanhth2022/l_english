@@ -113,7 +113,7 @@ class DueWordsWidgetProvider : AppWidgetProvider() {
         }
 
         val effectiveBaseUrl = if (baseUrl.isNullOrBlank()) {
-            "https://stewart-resource-busy-bristol.trycloudflare.com"
+            "https://kristal-nondichotomous-conclusionally.ngrok-free.dev"
         } else {
             baseUrl.trimEnd('/')
         }
@@ -130,6 +130,8 @@ class DueWordsWidgetProvider : AppWidgetProvider() {
                     requestMethod = "GET"
                     setRequestProperty("Authorization", "Bearer $token")
                     setRequestProperty("Accept", "application/json")
+                    // Tunnel ngrok miễn phí chèn trang cảnh báo HTML; bỏ qua nó.
+                    setRequestProperty("ngrok-skip-browser-warning", "true")
                     connectTimeout = 7000
                     readTimeout = 7000
                     instanceFollowRedirects = true

@@ -12,7 +12,7 @@ class AppConfig {
   /// Địa chỉ backend Spring Boot mặc định biên dịch.
   static const String defaultApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://stewart-resource-busy-bristol.trycloudflare.com',
+    defaultValue: 'https://kristal-nondichotomous-conclusionally.ngrok-free.dev',
   );
 
   /// Địa chỉ backend Spring Boot đang được sử dụng trong phiên làm việc.
@@ -91,6 +91,8 @@ class AppConfig {
         receiveTimeout: timeout,
         sendTimeout: timeout,
         validateStatus: (status) => true,
+        // Bỏ qua trang cảnh báo của tunnel ngrok miễn phí.
+        headers: const {'ngrok-skip-browser-warning': 'true'},
       ),
     );
     configureBypassCertificate(testDio);

@@ -598,7 +598,7 @@ class _BaseUrlDialogState extends State<_BaseUrlDialog> {
               },
               decoration: InputDecoration(
                 labelText: 'Backend Base URL',
-                hintText: 'https://...trycloudflare.com',
+                hintText: 'https://...ngrok-free.dev',
                 prefixIcon: const Icon(Icons.link_rounded),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.clear, size: 18),
