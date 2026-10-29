@@ -6,6 +6,7 @@ import 'package:l_english/features/words/data/models/word.dart';
 import 'package:l_english/features/words/data/word_api.dart';
 import 'package:l_english/features/words/ui/word_form_screen.dart';
 import 'package:l_english/features/words/ui/word_list_screen.dart';
+import 'package:l_english/features/words/ui/review_quiz_screen.dart';
 import 'package:provider/provider.dart';
 
 /// Màn hình giả để mở form Thêm/Sửa từ bằng một lần push thật.
@@ -124,6 +125,30 @@ void main() {
 
       expect(find.text('achieve'), findsNothing);
       expect(find.text('Đã xoá từ "achieve".'), findsOneWidget);
+    });
+
+    testWidgets('chạm Widget nhiều lần chỉ mở một phiên ôn tập', (tester) async {
+      await pumpScreen(tester, const WordListScreen(), null);
+      addTearDown(() => WordListScreen.selectedTabNotifier.value = 0);
+
+      // Lần chạm Widget đầu tiên mở phiên ôn tập.
+      WordListScreen.selectedTabNotifier.value = 1;
+      await tester.pumpAndSettle();
+      expect(find.byType(ReviewQuizScreen), findsOneWidget);
+
+      // App xuống nền, người dùng chạm Widget lần nữa: không được push thêm
+      // màn hình ôn tập (nếu push, đóng phiên trên sẽ lộ ra phiên thứ hai).
+      WordListScreen.selectedTabNotifier.value = 1;
+      await tester.pumpAndSettle();
+      expect(find.byType(ReviewQuizScreen), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Thoát'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReviewQuizScreen), findsNothing);
+      expect(find.text('Sổ từ của tôi'), findsOneWidget);
     });
 
     testWidgets('nút Thêm từ mở form thêm từ mới', (tester) async {

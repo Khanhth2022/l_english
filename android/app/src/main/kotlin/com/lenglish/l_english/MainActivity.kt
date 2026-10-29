@@ -42,11 +42,15 @@ class MainActivity : FlutterActivity() {
                 "getInitialRoute" -> {
                     val route = initialRoute ?: checkIntentForRoute(intent)
                     initialRoute = null
+                    // Đã bàn giao route: xoá khỏi Intent để Activity tạo lại
+                    // không phát lại đúng một lần chạm Widget.
+                    clearRouteIntent(intent)
                     result.success(route)
                 }
                 "getInitialProcessText" -> {
                     val text = initialProcessText ?: checkIntentForProcessText(intent)
                     initialProcessText = null
+                    clearProcessTextIntent(intent)
                     result.success(text)
                 }
                 "updateWidgetData" -> {
@@ -152,17 +156,76 @@ class MainActivity : FlutterActivity() {
         // 1. ACT-16: Bôi đen từ bên ngoài (ACTION_PROCESS_TEXT) hoặc Chia sẻ văn bản (ACTION_SEND)
         val processText = checkIntentForProcessText(intent)
         if (!processText.isNullOrBlank()) {
-            initialProcessText = processText
-            methodChannel?.invokeMethod("onProcessText", processText)
+            deliverProcessText(processText)
+            clearProcessTextIntent(intent)
             return
         }
 
         // 2. ACT-15: Chạm Widget mở phiên câu hỏi ôn tập
         val route = checkIntentForRoute(intent)
         if (route != null) {
-            initialRoute = route
-            methodChannel?.invokeMethod("onNavigateRoute", route)
+            deliverRoute(route)
+            clearRouteIntent(intent)
         }
+    }
+
+    /**
+     * Chuyển route sang Flutter. Nếu Flutter chưa đăng ký handler (ví dụ đang ở
+     * màn đăng nhập), giữ lại trong [initialRoute] để lần `getInitialRoute` sau lấy.
+     */
+    private fun deliverRoute(route: String) {
+        val channel = methodChannel
+        if (channel == null) {
+            initialRoute = route
+            return
+        }
+        initialRoute = null
+        channel.invokeMethod("onNavigateRoute", route, retryInitialRoute(route))
+    }
+
+    private fun deliverProcessText(text: String) {
+        val channel = methodChannel
+        if (channel == null) {
+            initialProcessText = text
+            return
+        }
+        initialProcessText = null
+        channel.invokeMethod("onProcessText", text, retryInitialProcessText(text))
+    }
+
+    private fun retryInitialRoute(route: String) = object : MethodChannel.Result {
+        override fun success(result: Any?) = Unit
+        override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+            initialRoute = route
+        }
+        override fun notImplemented() {
+            initialRoute = route
+        }
+    }
+
+    private fun retryInitialProcessText(text: String) = object : MethodChannel.Result {
+        override fun success(result: Any?) = Unit
+        override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+            initialProcessText = text
+        }
+        override fun notImplemented() {
+            initialProcessText = text
+        }
+    }
+
+    /** Xoá route khỏi Intent sau khi đã bàn giao, tránh phát lại khi Activity tạo lại. */
+    private fun clearRouteIntent(source: Intent?) {
+        if (source == null) return
+        source.action = null
+        source.data = null
+        source.removeExtra(EXTRA_ROUTE)
+    }
+
+    private fun clearProcessTextIntent(source: Intent?) {
+        if (source == null) return
+        source.action = null
+        source.removeExtra(Intent.EXTRA_PROCESS_TEXT)
+        source.removeExtra(Intent.EXTRA_TEXT)
     }
 
     private fun checkIntentForProcessText(intent: Intent?): String? {

@@ -53,6 +53,14 @@ class _WordListViewState extends State<_WordListView>
     ..addListener(_onTabChanged);
   final TextEditingController _searchController = TextEditingController();
 
+  /// Đang có phiên ôn tập mở hay không.
+  ///
+  /// Widget Android gửi route "due_words" mỗi lần người dùng chạm. Nếu app đang
+  /// ở nền mà phiên ôn tập cũ vẫn còn trên Navigator, mỗi lần chạm lại push
+  /// thêm một `ReviewQuizScreen` mới. Người dùng phải ôn hết các màn hình xếp
+  /// chồng đó nên số lần ôn của từ tăng đúng bằng số lần chạm Widget.
+  bool _reviewQuizOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -106,35 +114,50 @@ class _WordListViewState extends State<_WordListView>
   }
 
   Future<void> _startReviewQuiz() async {
-    final controller = context.read<WordListController>();
-    if (controller.status == LoadStatus.loading || controller.status == LoadStatus.idle) {
-      int waitMs = 0;
-      while (mounted && controller.status == LoadStatus.loading && waitMs < 3000) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        waitMs += 100;
+    // Widget có thể gửi route nhiều lần (chạm lại khi app ở nền). Chỉ mở một
+    // phiên ôn tập tại một thời điểm để không cộng sai số lần ôn.
+    if (_reviewQuizOpen) return;
+    _reviewQuizOpen = true;
+
+    try {
+      final controller = context.read<WordListController>();
+      if (controller.status == LoadStatus.loading ||
+          controller.status == LoadStatus.idle) {
+        int waitMs = 0;
+        while (mounted &&
+            controller.status == LoadStatus.loading &&
+            waitMs < 3000) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          waitMs += 100;
+        }
       }
-    }
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final now = DateTime.now();
-    final dueWords = controller.words.where((w) => w.isDue(now)).toList();
-    if (dueWords.isEmpty) {
-      _showMessage(context, 'Tuyệt vời! Bạn không còn từ nào cần ôn tập hôm nay.');
-      return;
-    }
+      final now = DateTime.now();
+      final dueWords = controller.words.where((w) => w.isDue(now)).toList();
+      if (dueWords.isEmpty) {
+        _showMessage(
+          context,
+          'Tuyệt vời! Bạn không còn từ nào cần ôn tập hôm nay.',
+        );
+        return;
+      }
 
-    final navigator = Navigator.of(context);
-    final changed = await navigator.push<bool>(
-      MaterialPageRoute(
-        builder: (_) => ReviewQuizScreen(
-          words: dueWords,
-          allWords: controller.words,
+      final navigator = Navigator.of(context);
+      final changed = await navigator.push<bool>(
+        MaterialPageRoute(
+          builder: (_) => ReviewQuizScreen(
+            words: dueWords,
+            allWords: controller.words,
+          ),
         ),
-      ),
-    );
-    if (!mounted) return;
-    if (changed == true) {
-      await controller.load();
+      );
+      if (!mounted) return;
+      if (changed == true) {
+        await controller.load();
+      }
+    } finally {
+      _reviewQuizOpen = false;
     }
   }
 
