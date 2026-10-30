@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../auth/token_store.dart';
 import '../config/app_config.dart';
+import '../services/widget/widget_service.dart';
 
 /// Gắn JWT vào mọi request và tự làm mới token khi gặp 401.
 ///
@@ -30,16 +31,13 @@ class AuthInterceptor extends Interceptor {
   final String refreshPath;
 
   static const String _retriedFlag = 'authRetried';
-  static const String _skipAuthFlag = 'skipAuth';
 
   Future<String?>? _refreshing;
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final token = tokenStore.tokens?.accessToken;
-    if (token != null &&
-        token.isNotEmpty &&
-        options.extra[_skipAuthFlag] != true) {
+    if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
     handler.next(options);
@@ -114,10 +112,22 @@ class AuthInterceptor extends Interceptor {
               : refreshToken,
         ),
       );
+      // Widget đọc token riêng: không đồng bộ lại thì widget sẽ dùng token cũ
+      // và nhận 401 sau khi access token được xoay vòng.
+      await WidgetService.syncWidget(
+        accessToken: newAccess,
+        baseUrl: AppConfig.apiBaseUrl,
+      );
       return newAccess;
+    } on DioException catch (error) {
+      // Chỉ xoá phiên khi máy chủ từ chối refresh token. Lỗi mạng/timeout
+      // không có nghĩa là phiên hết hạn, xoá sẽ đăng xuất người dùng oan.
+      final status = error.response?.statusCode;
+      if (status == 401 || status == 403) {
+        await tokenStore.clear();
+      }
+      return null;
     } catch (_) {
-      // Refresh token hết hạn hoặc đã bị thu hồi → xoá phiên hiện tại.
-      await tokenStore.clear();
       return null;
     }
   }

@@ -62,6 +62,11 @@ class WidgetService {
     }
   }
 
+  /// Xoá phiên của Widget (token + số từ) khi đăng xuất.
+  /// Truyền chuỗi rỗng thay vì `null` để native thực sự ghi đè token cũ.
+  static Future<bool> clearWidgetSession() =>
+      syncWidget(accessToken: '', dueCount: 0);
+
   /// Lấy route điều hướng nếu app được kích hoạt khi bấm vào Widget màn hình chính.
   static Future<String?> getInitialRoute() async {
     if (kIsWeb) return null;

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/auth/token_store.dart';
-import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../words/ui/connection_settings_screen.dart';
 import '../state/auth_controller.dart';
 
 /// Màn hình thông tin tài khoản và cấu hình hệ thống (act-03).
@@ -97,47 +95,10 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // Environment info
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Môi trường hoạt động',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoRow('Chế độ API:', AppConfig.useMockApi ? 'API giả lập (Bộ nhớ)' : 'Backend Spring Boot thật'),
-                  const Divider(height: 18),
-                  _buildInfoRow('Địa chỉ máy chủ:', AppConfig.apiBaseUrl),
-                  const Divider(height: 18),
-                  _buildInfoRow('Thuật toán ôn tập:', 'Spaced Repetition (1, 2, 4, 7, 15, 30 ngày)'),
-                  const Divider(height: 18),
-                  _buildInfoRow('Cơ chế token:', 'JWT HS256 + Refresh Token Rotation'),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
           // Actions
           Card(
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.settings_ethernet_rounded, color: AppTheme.primaryBlue),
-                  title: const Text('Cấu hình kết nối Backend'),
-                  subtitle: const Text('Đổi URL API máy chủ hoặc dán token thủ công', style: TextStyle(fontSize: 12.5)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ConnectionSettingsScreen()),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.logout_rounded, color: AppTheme.errorRed),
                   title: const Text('Đăng xuất tài khoản', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w600)),
@@ -146,33 +107,8 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 24),
-
-          Center(
-            child: Text(
-              'LEnglish App v1.0.0 • Bám sát tài liệu thiết kế',
-              style: TextStyle(fontSize: 12, color: AppTheme.textMuted.withValues(alpha: 0.7)),
-            ),
-          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.textMuted)),
-        const Spacer(),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textMain),
-          ),
-        ),
-      ],
     );
   }
 

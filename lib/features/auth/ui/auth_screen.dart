@@ -19,8 +19,8 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController = TabController(length: 2, vsync: this);
 
-  final _loginUsernameController = TextEditingController(text: 'user1');
-  final _loginPasswordController = TextEditingController(text: 'password123');
+  final _loginUsernameController = TextEditingController();
+  final _loginPasswordController = TextEditingController();
 
   final _registerUsernameController = TextEditingController();
   final _registerPasswordController = TextEditingController();
@@ -53,7 +53,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           IconButton(
             tooltip: 'Cấu hình Base URL',
             icon: const Icon(Icons.tune_rounded, color: AppTheme.textMuted),
-            onPressed: () => _showBaseUrlDialog(context),
+            onPressed: () => _showBaseUrlDialog(),
           ),
         ],
       ),
@@ -249,7 +249,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   ),
                   const SizedBox(height: 14),
                   InkWell(
-                    onTap: () => _showBaseUrlDialog(context),
+                    onTap: () => _showBaseUrlDialog(),
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -473,235 +473,258 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     }
   }
 
-  void _showBaseUrlDialog(BuildContext context) {
-    final dio = Provider.of<Dio?>(context, listen: false);
-    final urlController = TextEditingController(text: AppConfig.apiBaseUrl);
-    ConnectionTestResult? testResult;
-    bool isTesting = false;
-
-    showDialog<void>(
+  Future<void> _showBaseUrlDialog() async {
+    final saved = await showDialog<bool>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.dns_rounded, color: AppTheme.primaryBlue, size: 22),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Cấu hình Base URL',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
+      builder: (_) => const _BaseUrlDialog(),
+    );
+    if (saved != true || !mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Đã cập nhật máy chủ: ${AppConfig.apiBaseUrl}'),
+        backgroundColor: AppTheme.successGreen,
+      ),
+    );
+  }
+}
+
+/// Dialog cấu hình Base URL: tự quản lý vòng đời controller và kiểm tra
+/// `mounted` sau mỗi `await` để không gọi `setState` khi dialog đã đóng.
+class _BaseUrlDialog extends StatefulWidget {
+  const _BaseUrlDialog();
+
+  @override
+  State<_BaseUrlDialog> createState() => _BaseUrlDialogState();
+}
+
+class _BaseUrlDialogState extends State<_BaseUrlDialog> {
+  late final TextEditingController _urlController = TextEditingController(
+    text: AppConfig.apiBaseUrl,
+  );
+
+  ConnectionTestResult? _testResult;
+  bool _isTesting = false;
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _testConnection() async {
+    final raw = _urlController.text.trim();
+    if (raw.isEmpty) return;
+    final normalized = AppConfig.normalizeUrl(raw);
+    _urlController.text = normalized;
+    setState(() {
+      _isTesting = true;
+      _testResult = null;
+    });
+    final result = await AppConfig.testConnection(normalized);
+    if (!mounted) return;
+    setState(() {
+      _isTesting = false;
+      _testResult = result;
+    });
+  }
+
+  void _apply() {
+    final normalized = AppConfig.normalizeUrl(_urlController.text);
+    if (normalized.isEmpty ||
+        (!normalized.startsWith('http://') &&
+            !normalized.startsWith('https://'))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('URL phải bắt đầu bằng http:// hoặc https://'),
+          backgroundColor: AppTheme.errorRed,
+        ),
+      );
+      return;
+    }
+    AppConfig.setApiBaseUrl(normalized, context.read<Dio?>());
+    Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final testResult = _testResult;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.dns_rounded, color: AppTheme.primaryBlue, size: 22),
           ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Nhập địa chỉ máy chủ backend Spring Boot (Cloudflare tunnel hoặc IP máy tính trong mạng LAN):',
-                  style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: urlController,
-                  autofocus: false,
-                  keyboardType: TextInputType.url,
-                  onChanged: (_) {
-                    if (testResult != null) {
-                      setDialogState(() {
-                        testResult = null;
-                      });
-                    }
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Cấu hình Base URL',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Nhập địa chỉ máy chủ backend Spring Boot (Cloudflare tunnel hoặc IP máy tính trong mạng LAN):',
+              style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _urlController,
+              autofocus: false,
+              keyboardType: TextInputType.url,
+              onChanged: (_) {
+                if (_testResult != null) {
+                  setState(() => _testResult = null);
+                }
+              },
+              decoration: InputDecoration(
+                labelText: 'Backend Base URL',
+                hintText: 'https://...ngrok-free.dev',
+                prefixIcon: const Icon(Icons.link_rounded),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    _urlController.clear();
+                    setState(() => _testResult = null);
                   },
-                  decoration: InputDecoration(
-                    labelText: 'Backend Base URL',
-                    hintText: 'https://...trycloudflare.com',
-                    prefixIcon: const Icon(Icons.link_rounded),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        urlController.clear();
-                        setDialogState(() {
-                          testResult = null;
-                        });
-                      },
-                    ),
-                    border: const OutlineInputBorder(),
-                  ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Chọn nhanh (Presets):',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Chọn nhanh (Presets):',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                ActionChip(
+                  avatar: const Icon(Icons.cloud_queue_rounded, size: 16),
+                  label: const Text('Cloudflare Tunnel', style: TextStyle(fontSize: 12)),
+                  onPressed: () {
+                    _urlController.text = AppConfig.defaultApiBaseUrl;
+                    setState(() => _testResult = null);
+                  },
                 ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    ActionChip(
-                      avatar: const Icon(Icons.cloud_queue_rounded, size: 16),
-                      label: const Text('Cloudflare Tunnel', style: TextStyle(fontSize: 12)),
-                      onPressed: () {
-                        urlController.text = AppConfig.defaultApiBaseUrl;
-                        setDialogState(() => testResult = null);
-                      },
-                    ),
-                    ActionChip(
-                      avatar: const Icon(Icons.phone_android_rounded, size: 16),
-                      label: const Text('Máy ảo (10.0.2.2)', style: TextStyle(fontSize: 12)),
-                      onPressed: () {
-                        urlController.text = 'http://10.0.2.2:8080';
-                        setDialogState(() => testResult = null);
-                      },
-                    ),
-                    ActionChip(
-                      avatar: const Icon(Icons.computer_rounded, size: 16),
-                      label: const Text('Localhost (8080)', style: TextStyle(fontSize: 12)),
-                      onPressed: () {
-                        urlController.text = 'http://localhost:8080';
-                        setDialogState(() => testResult = null);
-                      },
-                    ),
-                  ],
+                ActionChip(
+                  avatar: const Icon(Icons.phone_android_rounded, size: 16),
+                  label: const Text('Máy ảo (10.0.2.2)', style: TextStyle(fontSize: 12)),
+                  onPressed: () {
+                    _urlController.text = 'http://10.0.2.2:8080';
+                    setState(() => _testResult = null);
+                  },
                 ),
-                const SizedBox(height: 14),
-                // Nút kiểm tra kết nối trực tiếp
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 11),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: isTesting
-                        ? null
-                        : () async {
-                            final raw = urlController.text.trim();
-                            if (raw.isEmpty) return;
-                            final normalized = AppConfig.normalizeUrl(raw);
-                            urlController.text = normalized;
-                            setDialogState(() {
-                              isTesting = true;
-                              testResult = null;
-                            });
-                            final result = await AppConfig.testConnection(normalized);
-                            setDialogState(() {
-                              isTesting = false;
-                              testResult = result;
-                            });
-                          },
-                    icon: isTesting
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.network_check_rounded, size: 20),
-                    label: Text(
-                      isTesting ? 'Đang kiểm tra kết nối...' : 'Kiểm tra kết nối tới máy chủ',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                  ),
-                ),
-                // Thẻ thông báo kết quả kiểm tra
-                if (testResult != null) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: testResult!.isSuccess
-                          ? AppTheme.successGreen.withValues(alpha: 0.1)
-                          : AppTheme.errorRed.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: testResult!.isSuccess
-                            ? AppTheme.successGreen.withValues(alpha: 0.3)
-                            : AppTheme.errorRed.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          testResult!.isSuccess
-                              ? Icons.check_circle_rounded
-                              : Icons.error_outline_rounded,
-                          color: testResult!.isSuccess
-                              ? AppTheme.successGreen
-                              : AppTheme.errorRed,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            testResult!.message,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: testResult!.isSuccess
-                                  ? AppTheme.successGreen
-                                  : AppTheme.errorRed,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                const Text(
-                  '💡 Gợi ý: Nếu dùng máy chủ mới chưa có dữ liệu, hãy sang tab "Đăng ký" để tạo tài khoản mới.',
-                  style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
+                ActionChip(
+                  avatar: const Icon(Icons.computer_rounded, size: 16),
+                  label: const Text('Localhost (8080)', style: TextStyle(fontSize: 12)),
+                  onPressed: () {
+                    _urlController.text = 'http://localhost:8080';
+                    setState(() => _testResult = null);
+                  },
                 ),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Hủy'),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _isTesting ? null : _testConnection,
+                icon: _isTesting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.network_check_rounded, size: 20),
+                label: Text(
+                  _isTesting ? 'Đang kiểm tra kết nối...' : 'Kiểm tra kết nối tới máy chủ',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
             ),
-            FilledButton(
-              onPressed: () {
-                final normalized = AppConfig.normalizeUrl(urlController.text);
-                if (normalized.isEmpty ||
-                    (!normalized.startsWith('http://') && !normalized.startsWith('https://'))) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('URL phải bắt đầu bằng http:// hoặc https://'),
-                      backgroundColor: AppTheme.errorRed,
-                    ),
-                  );
-                  return;
-                }
-                AppConfig.setApiBaseUrl(normalized, dio);
-                Navigator.of(ctx).pop();
-                setState(() {});
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Đã cập nhật máy chủ: $normalized'),
-                    backgroundColor: AppTheme.successGreen,
+            if (testResult != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: testResult.isSuccess
+                      ? AppTheme.successGreen.withValues(alpha: 0.1)
+                      : AppTheme.errorRed.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: testResult.isSuccess
+                        ? AppTheme.successGreen.withValues(alpha: 0.3)
+                        : AppTheme.errorRed.withValues(alpha: 0.3),
                   ),
-                );
-              },
-              child: const Text('Lưu & Áp dụng'),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      testResult.isSuccess
+                          ? Icons.check_circle_rounded
+                          : Icons.error_outline_rounded,
+                      color: testResult.isSuccess
+                          ? AppTheme.successGreen
+                          : AppTheme.errorRed,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        testResult.message,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: testResult.isSuccess
+                              ? AppTheme.successGreen
+                              : AppTheme.errorRed,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            const Text(
+              '💡 Gợi ý: Nếu dùng máy chủ mới chưa có dữ liệu, hãy sang tab "Đăng ký" để tạo tài khoản mới.',
+              style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
             ),
           ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          onPressed: _apply,
+          child: const Text('Lưu & Áp dụng'),
+        ),
+      ],
     );
   }
 }

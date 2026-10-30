@@ -76,7 +76,8 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
     Word? existing,
     String? initialEnglish,
   }) : _existing = existing {
-    englishController.text = existing?.english ?? (initialEnglish?.trim() ?? '');
+    englishController.text =
+        existing?.english ?? (initialEnglish?.trim() ?? '');
     level = existing?.level;
     rows = (existing == null || existing.values.isEmpty)
         ? [WordValueRow()]
@@ -148,7 +149,8 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
     } on ApiException catch (error) {
       return error.message;
     } catch (error) {
-      return 'Không sinh được nghĩa ($error).';
+      debugPrint('WordFormController: sinh nghĩa thất bại ($error).');
+      return 'Không sinh được nghĩa cho từ này. Vui lòng thử lại.';
     } finally {
       generating = false;
       notifyListeners();
@@ -165,6 +167,9 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
         .map((row) => row.toValue())
         .toList();
     if (values.isEmpty) return 'Cần ít nhất một nghĩa tiếng Việt.';
+    if (values.any((value) => value.vietnamese.isEmpty)) {
+      return 'Mỗi nghĩa cần có nội dung tiếng Việt.';
+    }
 
     saving = true;
     notifyListeners();
@@ -180,7 +185,8 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
     } on ApiException catch (error) {
       return error.message;
     } catch (error) {
-      return 'Không lưu được từ ($error).';
+      debugPrint('WordFormController: lưu từ thất bại ($error).');
+      return 'Không lưu được từ. Vui lòng thử lại.';
     } finally {
       saving = false;
       notifyListeners();

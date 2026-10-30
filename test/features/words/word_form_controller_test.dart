@@ -74,7 +74,10 @@ void main() {
     expect(controller.englishController.text, 'achieve');
     expect(controller.level, Level.b1);
     expect(controller.rows.length, existing.values.length);
-    expect(controller.rows.first.vietnameseController.text, 'đạt được, giành được');
+    expect(
+      controller.rows.first.vietnameseController.text,
+      'đạt được, giành được',
+    );
     expect(controller.rows.first.partOfSpeech, PartOfSpeech.verb);
   });
 
@@ -89,7 +92,10 @@ void main() {
     expect(controller.generating, isFalse);
     expect(controller.level, Level.b2);
     expect(controller.rows.length, 2);
-    expect(controller.rows.first.vietnameseController.text, 'kiên cường, mau hồi phục');
+    expect(
+      controller.rows.first.vietnameseController.text,
+      'kiên cường, mau hồi phục',
+    );
     expect(controller.notice, 'Đã điền 2 nghĩa cho "resilient".');
     expect(api.aiCallCount, 1);
 
@@ -147,6 +153,18 @@ void main() {
     expect(controller.saving, isFalse);
   });
 
+  test('save() từ chối dòng chỉ có ví dụ mà thiếu nghĩa tiếng Việt', () async {
+    final recording = _RecordingWordApi();
+    final controller = WordFormController(api: recording);
+    addTearDown(controller.dispose);
+
+    controller.englishController.text = 'lucid';
+    controller.rows.first.exampleController.text = 'a lucid explanation';
+
+    expect(await controller.save(), 'Mỗi nghĩa cần có nội dung tiếng Việt.');
+    expect(recording.createdDraft, isNull);
+  });
+
   test('save() tạo từ mới với dữ liệu đã nhập', () async {
     final recording = _RecordingWordApi();
     final controller = WordFormController(api: recording);
@@ -161,8 +179,14 @@ void main() {
     expect(await controller.save(), isNull);
     expect(recording.createdDraft?.english, 'lucid');
     expect(recording.createdDraft?.level, Level.c1);
-    expect(recording.createdDraft?.values.single.example, 'a lucid explanation');
-    expect(recording.createdDraft?.values.single.partOfSpeech, PartOfSpeech.adjective);
+    expect(
+      recording.createdDraft?.values.single.example,
+      'a lucid explanation',
+    );
+    expect(
+      recording.createdDraft?.values.single.partOfSpeech,
+      PartOfSpeech.adjective,
+    );
   });
 
   test('save() khi sửa từ thì gọi updateWord với đúng id', () async {

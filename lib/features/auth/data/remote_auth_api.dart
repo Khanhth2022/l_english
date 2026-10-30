@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
@@ -66,7 +67,8 @@ class RemoteAuthApi implements AuthApi {
     } on ApiException {
       rethrow;
     } catch (error) {
-      throw ApiException(0, 'Không xử lý được dữ liệu ($error).');
+      debugPrint('RemoteAuthApi: phản hồi không hợp lệ ($error).');
+      throw ApiException(0, 'Máy chủ trả về dữ liệu không hợp lệ.');
     }
   }
 }

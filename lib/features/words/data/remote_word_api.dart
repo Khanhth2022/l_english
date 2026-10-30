@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
@@ -41,7 +42,10 @@ class RemoteWordApi implements WordApi {
     if (data is Map && data['dueCount'] is num) {
       return (data['dueCount'] as num).toInt();
     }
-    return 0;
+    throw ApiException(
+      0,
+      'Máy chủ trả về số từ cần ôn không đúng định dạng.',
+    );
   });
 
   @override
@@ -128,7 +132,8 @@ class RemoteWordApi implements WordApi {
     } on ApiException {
       rethrow;
     } catch (error) {
-      throw ApiException(0, 'Không đọc được dữ liệu máy chủ trả về ($error).');
+      debugPrint('RemoteWordApi: phản hồi không hợp lệ ($error).');
+      throw ApiException(0, 'Máy chủ trả về dữ liệu không hợp lệ.');
     }
   }
 }

@@ -1,9 +1,11 @@
 package com.lenglish.l_english
 
+import android.Manifest
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
@@ -14,14 +16,17 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         const val CHANNEL = "com.lenglish.l_english/widget"
+        const val CHANNEL_REMINDER = "com.lenglish.l_english/reminder"
         const val EXTRA_ROUTE = "extra_route"
         const val ROUTE_DUE_WORDS = "due_words"
         const val ACTION_OPEN_DUE_WORDS = "com.lenglish.l_english.ACTION_OPEN_DUE_WORDS"
+        private const val REQUEST_POST_NOTIFICATIONS = 1402
     }
 
     private var initialRoute: String? = null
     private var initialProcessText: String? = null
     private var methodChannel: MethodChannel? = null
+    private var reminderChannel: MethodChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,11 +42,15 @@ class MainActivity : FlutterActivity() {
                 "getInitialRoute" -> {
                     val route = initialRoute ?: checkIntentForRoute(intent)
                     initialRoute = null
+                    // Đã bàn giao route: xoá khỏi Intent để Activity tạo lại
+                    // không phát lại đúng một lần chạm Widget.
+                    clearRouteIntent(intent)
                     result.success(route)
                 }
                 "getInitialProcessText" -> {
                     val text = initialProcessText ?: checkIntentForProcessText(intent)
                     initialProcessText = null
+                    clearProcessTextIntent(intent)
                     result.success(text)
                 }
                 "updateWidgetData" -> {
@@ -55,7 +64,7 @@ class MainActivity : FlutterActivity() {
                         editor.putInt(DueWordsWidgetProvider.KEY_DUE_COUNT, dueCount)
                     }
                     if (accessToken != null) {
-                        editor.putString(DueWordsWidgetProvider.KEY_ACCESS_TOKEN, accessToken)
+                        SecurePrefs.putToken(prefs, accessToken)
                     }
                     if (baseUrl != null) {
                         editor.putString(DueWordsWidgetProvider.KEY_BASE_URL, baseUrl)
@@ -82,6 +91,57 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        reminderChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            CHANNEL_REMINDER
+        )
+        reminderChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "scheduleReminder" -> {
+                    val hour = call.argument<Int>("hour") ?: 20
+                    val minute = call.argument<Int>("minute") ?: 0
+                    requestNotificationPermissionIfNeeded()
+                    ReminderScheduler.schedule(context, hour, minute)
+                    result.success(true)
+                }
+                "cancelReminder" -> {
+                    ReminderScheduler.cancel(context)
+                    result.success(true)
+                }
+                "getReminderSettings" -> {
+                    result.success(ReminderScheduler.readSettings(context))
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        requestPermissions(
+            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+            REQUEST_POST_NOTIFICATIONS
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_POST_NOTIFICATIONS &&
+            grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+        ) {
+            // Người dùng vừa cấp quyền: đặt lại alarm để lời nhắc kế tiếp hiển thị.
+            ReminderScheduler.rescheduleIfEnabled(this)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -96,17 +156,76 @@ class MainActivity : FlutterActivity() {
         // 1. ACT-16: Bôi đen từ bên ngoài (ACTION_PROCESS_TEXT) hoặc Chia sẻ văn bản (ACTION_SEND)
         val processText = checkIntentForProcessText(intent)
         if (!processText.isNullOrBlank()) {
-            initialProcessText = processText
-            methodChannel?.invokeMethod("onProcessText", processText)
+            deliverProcessText(processText)
+            clearProcessTextIntent(intent)
             return
         }
 
         // 2. ACT-15: Chạm Widget mở phiên câu hỏi ôn tập
         val route = checkIntentForRoute(intent)
         if (route != null) {
-            initialRoute = route
-            methodChannel?.invokeMethod("onNavigateRoute", route)
+            deliverRoute(route)
+            clearRouteIntent(intent)
         }
+    }
+
+    /**
+     * Chuyển route sang Flutter. Nếu Flutter chưa đăng ký handler (ví dụ đang ở
+     * màn đăng nhập), giữ lại trong [initialRoute] để lần `getInitialRoute` sau lấy.
+     */
+    private fun deliverRoute(route: String) {
+        val channel = methodChannel
+        if (channel == null) {
+            initialRoute = route
+            return
+        }
+        initialRoute = null
+        channel.invokeMethod("onNavigateRoute", route, retryInitialRoute(route))
+    }
+
+    private fun deliverProcessText(text: String) {
+        val channel = methodChannel
+        if (channel == null) {
+            initialProcessText = text
+            return
+        }
+        initialProcessText = null
+        channel.invokeMethod("onProcessText", text, retryInitialProcessText(text))
+    }
+
+    private fun retryInitialRoute(route: String) = object : MethodChannel.Result {
+        override fun success(result: Any?) = Unit
+        override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+            initialRoute = route
+        }
+        override fun notImplemented() {
+            initialRoute = route
+        }
+    }
+
+    private fun retryInitialProcessText(text: String) = object : MethodChannel.Result {
+        override fun success(result: Any?) = Unit
+        override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+            initialProcessText = text
+        }
+        override fun notImplemented() {
+            initialProcessText = text
+        }
+    }
+
+    /** Xoá route khỏi Intent sau khi đã bàn giao, tránh phát lại khi Activity tạo lại. */
+    private fun clearRouteIntent(source: Intent?) {
+        if (source == null) return
+        source.action = null
+        source.data = null
+        source.removeExtra(EXTRA_ROUTE)
+    }
+
+    private fun clearProcessTextIntent(source: Intent?) {
+        if (source == null) return
+        source.action = null
+        source.removeExtra(Intent.EXTRA_PROCESS_TEXT)
+        source.removeExtra(Intent.EXTRA_TEXT)
     }
 
     private fun checkIntentForProcessText(intent: Intent?): String? {

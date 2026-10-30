@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'app.dart';
+import 'core/auth/secure_token_store.dart';
 import 'core/auth/token_store.dart';
 import 'core/config/app_config.dart';
 import 'core/network/api_client.dart';
@@ -17,9 +19,16 @@ import 'features/words/data/word_api.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final tokenStore = InMemoryTokenStore();
+  // Token được mã hoá trong Keychain/EncryptedSharedPreferences và khôi phục
+  // lại trước khi dựng giao diện để giữ phiên qua các lần mở ứng dụng.
+  final tokenStore = SecureTokenStore(
+    const FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    ),
+  );
+  await tokenStore.restore();
 
-  if (AppConfig.useMockApi) {
+  if (AppConfig.useMockApi && !tokenStore.hasSession) {
     // Khởi tạo phiên thử nghiệm mặc định để người dùng khám phá ngay ứng dụng
     await tokenStore.save(
       const TokenPair(

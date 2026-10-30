@@ -43,7 +43,8 @@ class AuthController extends ChangeNotifier with SafeChangeNotifier {
     } on ApiException catch (error) {
       errorMessage = error.message;
     } catch (e) {
-      errorMessage = 'Đăng nhập không thành công ($e).';
+      debugPrint('AuthController: đăng nhập thất bại ($e).');
+      errorMessage = 'Đăng nhập không thành công. Vui lòng thử lại.';
     } finally {
       isLoading = false;
       notifyListeners();
@@ -64,7 +65,8 @@ class AuthController extends ChangeNotifier with SafeChangeNotifier {
     } on ApiException catch (error) {
       errorMessage = error.message;
     } catch (e) {
-      errorMessage = 'Đăng ký không thành công ($e).';
+      debugPrint('AuthController: đăng ký thất bại ($e).');
+      errorMessage = 'Đăng ký không thành công. Vui lòng thử lại.';
     } finally {
       isLoading = false;
       notifyListeners();
@@ -80,7 +82,7 @@ class AuthController extends ChangeNotifier with SafeChangeNotifier {
       } catch (_) {}
     }
     await tokenStore.clear();
-    WidgetService.syncWidget(accessToken: '', dueCount: 0);
+    WidgetService.clearWidgetSession();
     notifyListeners();
   }
 

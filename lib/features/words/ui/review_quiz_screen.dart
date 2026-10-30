@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -71,15 +72,21 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
     ];
 
     _questions = widget.words.map((word) {
-      final correctMeaning = word.values.isNotEmpty
-          ? word.values.first.vietnamese.trim()
-          : 'Không có nghĩa';
+      final acceptedMeanings = word.values
+          .map((value) => value.vietnamese.trim())
+          .where((meaning) => meaning.isNotEmpty)
+          .toSet();
+      if (acceptedMeanings.isEmpty) {
+        acceptedMeanings.add('Không có nghĩa');
+      }
+      final correctMeaning = acceptedMeanings.first;
 
-      // Chọn 3 đáp án sai khác
-      final distractors = allMeanings
-          .where((m) => m != correctMeaning)
-          .toList()
-        ..shuffle(rng);
+      // Chọn 3 đáp án sai khác, không trùng bất kỳ nghĩa nào được chấp nhận.
+      final distractors =
+          allMeanings
+              .where((meaning) => !acceptedMeanings.contains(meaning))
+              .toList()
+            ..shuffle(rng);
 
       final chosen = <String>[];
       for (final m in distractors) {
@@ -90,19 +97,18 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
       var fallbackIdx = 0;
       while (chosen.length < 3 && fallbackIdx < fallbackDistractors.length) {
         final fb = fallbackDistractors[fallbackIdx++];
-        if (fb != correctMeaning && !chosen.contains(fb)) {
+        if (!acceptedMeanings.contains(fb) && !chosen.contains(fb)) {
           chosen.add(fb);
         }
       }
 
       final options = [correctMeaning, ...chosen]..shuffle(rng);
-      final correctIdx = options.indexOf(correctMeaning);
 
       return _QuizQuestion(
         word: word,
         correctMeaning: correctMeaning,
+        acceptedMeanings: acceptedMeanings,
         options: options,
-        correctOptionIndex: correctIdx,
       );
     }).toList();
   }
@@ -111,25 +117,25 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
     if (_isAnswered) return;
 
     final q = _questions[_currentIndex];
-    final isCorrect = index == q.correctOptionIndex;
+    final isCorrect = q.isCorrect(index);
 
     setState(() {
       _selectedOptionIndex = index;
       _isAnswered = true;
       if (isCorrect) {
         _correctCount++;
+        // Chỉ từ trả lời đúng mới được đẩy lịch ôn (SRS).
+        _reviewedWordIds.add(q.word.id);
       }
-      _reviewedWordIds.add(q.word.id);
     });
   }
 
   void _onGiveUp() {
     if (_isAnswered) return;
-    final q = _questions[_currentIndex];
     setState(() {
       _selectedOptionIndex = -1; // -1: người dùng không chọn mà xem đáp án
       _isAnswered = true;
-      _reviewedWordIds.add(q.word.id);
+      // Xem đáp án không tính là đã nhớ từ, không cập nhật SRS.
     });
   }
 
@@ -151,14 +157,27 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
   Future<void> _completeReview() async {
     if (_submitting) return;
 
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    if (_reviewedWordIds.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Chưa trả lời đúng từ nào nên lịch ôn không thay đổi.'),
+        ),
+      );
+      navigator.pop(true);
+      return;
+    }
+
     setState(() {
       _submitting = true;
     });
 
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
     final controller = context.read<WordListController>();
-    final error = await controller.confirmReviewWords(_reviewedWordIds.toList());
+    final error = await controller.confirmReviewWords(
+      _reviewedWordIds.toList(),
+    );
 
     if (!mounted) return;
     setState(() {
@@ -167,10 +186,7 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
 
     if (error != null) {
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(error),
-          backgroundColor: AppTheme.errorRed,
-        ),
+        SnackBar(content: Text(error), backgroundColor: AppTheme.errorRed),
       );
       return;
     }
@@ -245,16 +261,25 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                 child: Padding(
                   padding: const EdgeInsets.only(right: 16),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.successBg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppTheme.successGreen.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.check_circle_rounded, size: 14, color: AppTheme.successGreen),
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          size: 14,
+                          color: AppTheme.successGreen,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '$_correctCount đúng',
@@ -276,7 +301,9 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                   child: LinearProgressIndicator(
                     value: (_currentIndex + 1) / _questions.length,
                     backgroundColor: AppTheme.borderLight,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppTheme.primaryBlue,
+                    ),
                   ),
                 )
               : null,
@@ -284,8 +311,8 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
         body: _questions.isEmpty
             ? _buildEmptyState()
             : _isFinished
-                ? _buildFinishedState()
-                : _buildQuestionView(),
+            ? _buildFinishedState()
+            : _buildQuestionView(),
       ),
     );
   }
@@ -297,7 +324,11 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.celebration_rounded, size: 64, color: AppTheme.primaryBlue),
+            const Icon(
+              Icons.celebration_rounded,
+              size: 64,
+              color: AppTheme.primaryBlue,
+            ),
             const SizedBox(height: 16),
             const Text(
               'Không có từ nào cần ôn tập hôm nay!',
@@ -358,10 +389,15 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                       children: [
                         if (word.level != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             margin: const EdgeInsets.only(right: 6),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryLight.withValues(alpha: 0.12),
+                              color: AppTheme.primaryLight.withValues(
+                                alpha: 0.12,
+                              ),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -375,7 +411,10 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                           ),
                         if (pos != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.aiBg,
                               borderRadius: BorderRadius.circular(6),
@@ -418,7 +457,10 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                       if (!_showClue)
                         TextButton.icon(
                           onPressed: () => setState(() => _showClue = true),
-                          icon: const Icon(Icons.lightbulb_outline_rounded, size: 18),
+                          icon: const Icon(
+                            Icons.lightbulb_outline_rounded,
+                            size: 18,
+                          ),
                           label: const Text('Xem câu ví dụ gợi ý'),
                           style: TextButton.styleFrom(
                             foregroundColor: AppTheme.warningOrange,
@@ -430,7 +472,11 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                           decoration: BoxDecoration(
                             color: AppTheme.warningBg,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.warningOrange.withValues(alpha: 0.2)),
+                            border: Border.all(
+                              color: AppTheme.warningOrange.withValues(
+                                alpha: 0.2,
+                              ),
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,7 +489,8 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                                   color: AppTheme.textMain,
                                 ),
                               ),
-                              if (exampleTr != null && exampleTr.trim().isNotEmpty) ...[
+                              if (exampleTr != null &&
+                                  exampleTr.trim().isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   exampleTr,
@@ -480,7 +527,7 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                 _buildOptionCard(
                   index: i,
                   optionText: q.options[i],
-                  correctIndex: q.correctOptionIndex,
+                  isCorrect: q.isCorrect(i),
                 ),
             ],
           ),
@@ -495,7 +542,7 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
   Widget _buildOptionCard({
     required int index,
     required String optionText,
-    required int correctIndex,
+    required bool isCorrect,
   }) {
     final letters = ['A', 'B', 'C', 'D'];
     final letter = index < letters.length ? letters[index] : '${index + 1}';
@@ -507,7 +554,7 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
     Color? trailingColor;
 
     if (_isAnswered) {
-      if (index == correctIndex) {
+      if (isCorrect) {
         cardBg = AppTheme.successBg;
         borderColor = AppTheme.successGreen;
         textColor = AppTheme.successGreen;
@@ -536,7 +583,9 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: borderColor,
-                width: (_isAnswered && (index == correctIndex || index == _selectedOptionIndex))
+                width:
+                    (_isAnswered &&
+                        (isCorrect || index == _selectedOptionIndex))
                     ? 2
                     : 1,
               ),
@@ -547,11 +596,11 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: (_isAnswered && index == correctIndex)
+                    color: (_isAnswered && isCorrect)
                         ? AppTheme.successGreen
                         : (_isAnswered && index == _selectedOptionIndex)
-                            ? AppTheme.errorRed
-                            : AppTheme.surfaceLight,
+                        ? AppTheme.errorRed
+                        : AppTheme.surfaceLight,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -560,8 +609,9 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: (_isAnswered &&
-                                (index == correctIndex || index == _selectedOptionIndex))
+                        color:
+                            (_isAnswered &&
+                                (isCorrect || index == _selectedOptionIndex))
                             ? Colors.white
                             : AppTheme.textMuted,
                       ),
@@ -590,6 +640,7 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
   }
 
   Widget _buildBottomBar(_QuizQuestion q) {
+    final selectedCorrect = q.isCorrect(_selectedOptionIndex ?? -1);
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: BoxDecoration(
@@ -615,18 +666,18 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                         Row(
                           children: [
                             Icon(
-                              _selectedOptionIndex == q.correctOptionIndex
+                              selectedCorrect
                                   ? Icons.check_circle_rounded
                                   : Icons.cancel_rounded,
                               size: 18,
-                              color: _selectedOptionIndex == q.correctOptionIndex
+                              color: selectedCorrect
                                   ? AppTheme.successGreen
                                   : AppTheme.errorRed,
                             ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                _selectedOptionIndex == q.correctOptionIndex
+                                selectedCorrect
                                     ? 'Chính xác!'
                                     : 'Chưa chính xác!',
                                 maxLines: 1,
@@ -634,7 +685,7 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: _selectedOptionIndex == q.correctOptionIndex
+                                  color: selectedCorrect
                                       ? AppTheme.successGreen
                                       : AppTheme.errorRed,
                                 ),
@@ -642,7 +693,7 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                             ),
                           ],
                         ),
-                        if (_selectedOptionIndex != q.correctOptionIndex) ...[
+                        if (!selectedCorrect) ...[
                           const SizedBox(height: 2),
                           Text(
                             'Đáp án: ${q.correctMeaning}',
@@ -661,7 +712,10 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                   FilledButton(
                     onPressed: _nextQuestion,
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                     ),
                     child: Text(
                       _currentIndex < _questions.length - 1
@@ -679,7 +733,10 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                     label: const Text('Xem đáp án'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.textMuted,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -749,15 +806,27 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: _buildStatItem('Số câu đúng', '$_correctCount/$total', AppTheme.primaryBlue),
+                    child: _buildStatItem(
+                      'Số câu đúng',
+                      '$_correctCount/$total',
+                      AppTheme.primaryBlue,
+                    ),
                   ),
                   Container(width: 1, height: 40, color: AppTheme.borderLight),
                   Expanded(
-                    child: _buildStatItem('Độ chính xác', '$accuracy%', AppTheme.successGreen),
+                    child: _buildStatItem(
+                      'Độ chính xác',
+                      '$accuracy%',
+                      AppTheme.successGreen,
+                    ),
                   ),
                   Container(width: 1, height: 40, color: AppTheme.borderLight),
                   Expanded(
-                    child: _buildStatItem('Cập nhật SRS', '${_reviewedWordIds.length} từ', AppTheme.aiPurple),
+                    child: _buildStatItem(
+                      'Cập nhật SRS',
+                      '${_reviewedWordIds.length} từ',
+                      AppTheme.aiPurple,
+                    ),
                   ),
                 ],
               ),
@@ -773,11 +842,15 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, size: 18, color: AppTheme.textMuted),
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 18,
+                    color: AppTheme.textMuted,
+                  ),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Lịch ôn của các từ này sẽ tự động được dời xa hơn theo thuật toán Spaced Repetition (SRS).',
+                      'Chỉ những từ bạn trả lời đúng mới được dời lịch ôn theo thuật toán Spaced Repetition (SRS).',
                       style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
                     ),
                   ),
@@ -805,7 +878,10 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
                   _submitting
                       ? 'Đang cập nhật tiến độ SRS…'
                       : 'Xác nhận & Cập nhật tiến độ',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -840,12 +916,18 @@ class _QuizQuestion {
   _QuizQuestion({
     required this.word,
     required this.correctMeaning,
+    required this.acceptedMeanings,
     required this.options,
-    required this.correctOptionIndex,
   });
 
   final Word word;
   final String correctMeaning;
+  final Set<String> acceptedMeanings;
   final List<String> options;
-  final int correctOptionIndex;
+
+  /// Mọi nghĩa của từ đều được chấp nhận, không chỉ nghĩa đầu tiên.
+  bool isCorrect(int index) {
+    if (index < 0 || index >= options.length) return false;
+    return acceptedMeanings.contains(options[index]);
+  }
 }

@@ -96,9 +96,3 @@ class ApiException implements Exception {
   @override
   String toString() => 'ApiException($statusCode): $message';
 }
-
-/// Token hết hạn và không làm mới được → người dùng phải đăng nhập lại.
-class SessionExpiredException extends ApiException {
-  SessionExpiredException()
-    : super(401, 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
-}
