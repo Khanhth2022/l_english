@@ -45,13 +45,6 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
   final OcrService _ocrService = OcrService();
   bool _isProcessingOcr = false;
 
-  static const List<String> _samplePhrases = [
-    'I has went to school yesterday with my best friends.',
-    'Although it was raining heavily, but we still decided to go out.',
-    'English has become an essential language in the modern globalization era.',
-    'He do not likes eating spicy food at all.',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -94,7 +87,7 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    'Quét OCR trích xuất chữ (act-17)',
+                    'Quét OCR trích xuất chữ',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -420,24 +413,6 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                                     textStyle: const TextStyle(fontSize: 12),
                                   ),
                                 ),
-                                const SizedBox(width: 6),
-                                TextButton.icon(
-                                  onPressed: () =>
-                                      _showQuickTemplates(context, controller),
-                                  icon: const Icon(
-                                    Icons.lightbulb_outline,
-                                    size: 16,
-                                  ),
-                                  label: const Text('Mẫu câu'),
-                                  style: TextButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 4,
-                                    ),
-                                    textStyle: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -489,47 +464,6 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                         ),
                       ],
                     ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showQuickTemplates(
-    BuildContext context,
-    PhraseFormController controller,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Chọn câu mẫu để thử nghiệm:',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            ..._samplePhrases.map(
-              (phrase) => ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(
-                  Icons.article_outlined,
-                  color: AppTheme.primaryBlue,
-                ),
-                title: Text(phrase, style: const TextStyle(fontSize: 13.5)),
-                onTap: () {
-                  controller.setText(phrase);
-                  Navigator.of(ctx).pop();
-                },
-              ),
             ),
           ],
         ),

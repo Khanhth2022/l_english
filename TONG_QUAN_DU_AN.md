@@ -61,7 +61,7 @@ lib/
 │   └── utils/date_format.dart
 ├── features/
 │   ├── auth/                          # Đăng ký, đăng nhập, đăng xuất, profile
-│   ├── words/                         # CRUD từ, SRS, quiz, topic, cấu hình kết nối
+│   ├── words/                         # CRUD từ, SRS, quiz, topic
 │   ├── phrases/                       # CRUD đoạn văn, chấm điểm, chi tiết lỗi
 │   ├── android_tools/                 # Màn hình tiện ích Android
 │   └── home/                          # NavigationBar 4 tab + deep link/intent
@@ -82,7 +82,7 @@ lib/
 
 - Đăng ký / đăng nhập / đăng xuất / refresh token.
 - `AuthInterceptor` gắn Bearer token, gặp `401` thì refresh **một lần** (single-flight) rồi retry.
-- Màn hình đăng nhập có dialog **cấu hình Base URL**, kiểm tra kết nối, chuẩn hóa URL (tự thêm `http/https`, bỏ `/api`, bỏ `/` cuối).
+- Màn hình đăng nhập có dialog **cấu hình Base URL**, kiểm tra kết nối, chuẩn hóa URL (tự thêm `http/https`, bỏ `/api`, bỏ `/` cuối) — dùng khi cần đổi máy chủ lúc debug.
 - `ProfileScreen` hiển thị phiên hiện tại.
 - **Lưu ý:** token chỉ nằm trong RAM (`InMemoryTokenStore`), khởi động lại app là mất phiên.
 

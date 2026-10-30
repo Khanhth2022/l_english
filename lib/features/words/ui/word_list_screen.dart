@@ -6,7 +6,6 @@ import '../../../core/ui/status_views.dart';
 import '../data/models/word.dart';
 import '../data/word_api.dart';
 import '../state/word_list_controller.dart';
-import 'connection_settings_screen.dart';
 import 'widgets/word_card.dart';
 import 'review_quiz_screen.dart';
 import 'word_form_screen.dart';
@@ -262,30 +261,6 @@ class _WordListViewState extends State<_WordListView>
             tooltip: 'Thêm từ theo chủ đề (AI)',
             icon: const Icon(Icons.auto_awesome, color: AppTheme.aiPurple),
             onPressed: () => _openTopicWords(context, controller),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Khác',
-            onSelected: (value) async {
-              if (value == 'topic') {
-                await _openTopicWords(context, controller);
-              } else if (value == 'settings') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ConnectionSettingsScreen(),
-                  ),
-                );
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'topic',
-                child: Text('Thêm từ theo chủ đề (AI)'),
-              ),
-              PopupMenuItem(
-                value: 'settings',
-                child: Text('Cấu hình kết nối'),
-              ),
-            ],
           ),
         ],
         bottom: TabBar(

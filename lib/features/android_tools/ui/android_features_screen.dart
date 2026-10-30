@@ -8,8 +8,6 @@ import '../../../core/services/widget/widget_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../phrases/ui/phrase_form_screen.dart';
 import '../../words/data/word_api.dart';
-import '../../words/state/word_list_controller.dart';
-import '../../words/ui/word_form_screen.dart';
 
 /// Màn hình tương tác và mô phỏng 4 tính năng tích hợp hệ điều hành Android (act-14..17).
 class AndroidFeaturesScreen extends StatefulWidget {
@@ -174,7 +172,7 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
           _buildFeatureCard(
             icon: Icons.document_scanner_rounded,
             iconColor: AppTheme.aiPurple,
-            title: 'Quét OCR lấy văn bản (act-17)',
+            title: 'Quét OCR lấy văn bản',
             description: 'Sử dụng ML Kit OCR on-device để trích xuất văn bản tiếng Anh từ ảnh/tài liệu và đưa thẳng vào ô Chấm đoạn văn.',
             action: ElevatedButton.icon(
               onPressed: () {
@@ -201,7 +199,7 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
               return _buildFeatureCard(
                 icon: Icons.widgets_rounded,
                 iconColor: AppTheme.primaryBlue,
-                title: 'Widget màn hình chính (act-15)',
+                title: 'Widget màn hình chính',
                 description: 'AppWidgetProvider hiển thị số từ đến hạn ôn tập ngay trên màn hình chính Android, cập nhật định kỳ và hỗ trợ chạm để mở app.',
                 action: Wrap(
                   spacing: 8,
@@ -375,7 +373,7 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
           _buildFeatureCard(
             icon: Icons.notifications_active_rounded,
             iconColor: AppTheme.warningOrange,
-            title: 'Thông báo ôn tập (act-14)',
+            title: 'Thông báo ôn tập',
             description: 'AlarmManager đánh thức lời nhắc hằng ngày và NotificationManager hiển thị thông báo nhắc ôn tập Spaced Repetition. Lịch được khôi phục sau khi khởi động lại máy.',
             child: Column(
               children: [
@@ -421,7 +419,7 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
           _buildFeatureCard(
             icon: Icons.text_fields_rounded,
             iconColor: AppTheme.successGreen,
-            title: 'Thêm từ từ bộ chọn văn bản (act-16)',
+            title: 'Thêm từ từ bộ chọn văn bản',
             description: 'Bôi đen bất kỳ từ hoặc câu tiếng Anh nào trên trình duyệt, PDF, hoặc ứng dụng khác; chọn "Thêm vào LEnglish" để mở form đã điền sẵn từ, sau đó bấm "Sinh nghĩa bằng AI" nếu muốn điền nghĩa tự động.',
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -467,24 +465,6 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
                   ),
                 ],
               ),
-            ),
-            action: OutlinedButton.icon(
-              onPressed: () async {
-                final changed = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const WordFormScreen(initialEnglish: 'resilient'),
-                  ),
-                );
-                if (changed == true && context.mounted) {
-                  try {
-                    await context.read<WordListController>().load();
-                    _reloadDueCount();
-                  } catch (_) {}
-                }
-              },
-              icon: const Icon(Icons.bolt_rounded, size: 16),
-              label: const Text('Thử nghiệm với từ mẫu "resilient"'),
             ),
           ),
           const SizedBox(height: 20),
