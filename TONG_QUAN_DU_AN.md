@@ -30,7 +30,7 @@ Repo **chỉ chứa Flutter client**; backend REST + MySQL 8 + JWT được mô 
 | App version | `1.0.0+1` |
 | State management | `provider` 6.1.5 |
 | HTTP | `dio` 5.11.1 |
-| OCR | `google_mlkit_text_recognition` 0.17.1 |
+| OCR | `google_mlkit_text_recognition` 0.17.1 (mobile) + Tesseract.js 5.1.1 qua CDN (web) |
 | Ảnh | `image_picker` 1.2.4 |
 | Lint | `flutter_lints` 6.0.0 |
 | Android | Kotlin, Java 17, `applicationId com.lenglish.l_english`, multiDex bật |
@@ -53,7 +53,7 @@ lib/
 │   │   ├── api_exception.dart         # Chuẩn hóa lỗi HTTP
 │   │   ├── auth_interceptor.dart      # Bearer JWT + refresh token single-flight
 │   │   └── ssl_helper*.dart           # Bypass cert có điều kiện
-│   ├── services/ocr/                  # OCR mobile + stub web/desktop
+│   ├── services/ocr/                  # OCR mobile (ML Kit) + web (Tesseract.js) + stub desktop
 │   ├── services/widget/               # MethodChannel widget + process text
 │   ├── state/safe_change_notifier.dart
 │   ├── theme/app_theme.dart           # Material 3, Blue/Emerald/Violet
@@ -100,7 +100,7 @@ lib/
 
 - Danh sách bài đã chấm kèm điểm, số lỗi.
 - Form nhập **10–5000 ký tự**, đếm ký tự, validate hai lớp (controller + mock API).
-- OCR từ ảnh/camera (ML Kit) đổ văn bản vào form.
+- OCR từ ảnh/camera (ML Kit trên mobile, Tesseract.js trên web) đổ văn bản vào form.
 - Bottom sheet chi tiết: điểm, câu gốc, câu sửa, từng lỗi + giải thích.
 - Xóa đoạn văn (cascade lỗi ngữ pháp phía backend).
 
@@ -110,7 +110,7 @@ lib/
 |---|---|
 | **ACT-15 Widget** | ✅ Có native `DueWordsWidgetProvider.kt`, layout widget, gọi trực tiếp `GET /api/words/due-count`, cache SharedPreferences, nút refresh, chạm mở `lenglish://review` → tab Ôn tập |
 | **ACT-16 Bôi đen/chia sẻ** | ✅ `ACTION_PROCESS_TEXT` + `ACTION_SEND`, MethodChannel `onProcessText`, mở `WordFormScreen` với từ điền sẵn |
-| **ACT-17 OCR** | ✅ ML Kit trên mobile; stub trên web/desktop |
+| **ACT-17 OCR** | ✅ ML Kit trên mobile, Tesseract.js (WASM) trên web qua `web/ocr_bridge.js`; desktop chưa có engine nên trả `unsupported` |
 | **ACT-14 Thông báo** | ⚠️ **Chỉ là UI mô phỏng** trong `AndroidFeaturesScreen`; chưa có WorkManager/NotificationManager native |
 
 ### 4.5. Điều hướng

@@ -44,6 +44,8 @@ class _PhraseFormView extends StatefulWidget {
 class _PhraseFormViewState extends State<_PhraseFormView> {
   final OcrService _ocrService = OcrService();
   bool _isProcessingOcr = false;
+  String? _ocrStage;
+  double? _ocrProgress;
 
   @override
   void initState() {
@@ -140,74 +142,103 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
 
     if (source == null || !mounted) return;
 
-    setState(() => _isProcessingOcr = true);
+    setState(() {
+      _isProcessingOcr = true;
+      _ocrStage = 'Đang mở ảnh…';
+      _ocrProgress = null;
+    });
 
     try {
       final image = await _ocrService.pickImage(source);
-      if (image == null) {
-        return;
-      }
-
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(width: 12),
-              Text('Đang tiền xử lý ảnh & chạy ML Kit OCR...'),
-            ],
-          ),
-          duration: Duration(seconds: 2),
-        ),
+      if (image == null) return;
+
+      final result = await _ocrService.extractText(
+        image,
+        onProgress: (progress, stage) {
+          if (!mounted) return;
+          setState(() {
+            _ocrProgress = progress;
+            if (stage != null && stage.isNotEmpty) {
+              _ocrStage = stage;
+            }
+          });
+        },
       );
 
-      final extractedText = await _ocrService.extractText(image);
-
       if (!mounted) return;
-
-      if (extractedText == null || extractedText.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Không tìm thấy văn bản trong ảnh'),
-            backgroundColor: AppTheme.errorRed,
-          ),
-        );
-      } else {
-        controller.setText(extractedText.trim());
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Đã trích xuất ${extractedText.trim().length} ký tự từ ảnh thành công.',
-            ),
-            backgroundColor: AppTheme.successGreen,
-          ),
-        );
-      }
+      _handleOcrResult(controller, result);
     } catch (e) {
       debugPrint('PhraseFormScreen: quét ảnh OCR thất bại ($e).');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Không quét được ảnh. Vui lòng chọn ảnh khác hoặc thử lại.',
-            ),
-            backgroundColor: AppTheme.errorRed,
-          ),
+        _showOcrSnackBar(
+          'Không quét được ảnh. Vui lòng chọn ảnh khác hoặc thử lại.',
+          AppTheme.errorRed,
         );
       }
     } finally {
       if (mounted) {
-        setState(() => _isProcessingOcr = false);
+        setState(() {
+          _isProcessingOcr = false;
+          _ocrStage = null;
+          _ocrProgress = null;
+        });
       }
     }
+  }
+
+  /// Hiển thị kết quả quét theo từng trạng thái thật của OCR, thay vì luôn báo
+  /// "Không tìm thấy văn bản trong ảnh" cho mọi trường hợp thất bại.
+  void _handleOcrResult(PhraseFormController controller, OcrResult result) {
+    if (result.hasText) {
+      final text = result.text!.trim();
+      controller.setText(text);
+      _showOcrSnackBar(
+        'Đã trích xuất ${text.length} ký tự từ ảnh thành công.',
+        AppTheme.successGreen,
+      );
+      return;
+    }
+
+    switch (result.status) {
+      case OcrStatus.empty:
+        _showOcrSnackBar(
+          result.message ??
+              'Không tìm thấy văn bản trong ảnh. '
+                  'Hãy chụp gần hơn, đủ sáng và giữ thẳng trang giấy.',
+          AppTheme.errorRed,
+        );
+      case OcrStatus.unsupported:
+        _showOcrSnackBar(
+          result.message ??
+              'Nền tảng hiện tại chưa hỗ trợ quét OCR. '
+                  'Vui lòng dùng Android/iOS hoặc bản web.',
+          AppTheme.errorRed,
+        );
+      case OcrStatus.failed:
+        _showOcrSnackBar(
+          'Không quét được ảnh: ${result.message ?? 'lỗi không xác định'}.',
+          AppTheme.errorRed,
+        );
+      case OcrStatus.success:
+        _showOcrSnackBar(
+          'Không đọc được nội dung nào từ ảnh. Vui lòng thử ảnh khác.',
+          AppTheme.errorRed,
+        );
+    }
+  }
+
+  void _showOcrSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+        ),
+      );
   }
 
   @override
@@ -322,6 +353,60 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+
+            // Tiến trình quét OCR. Bản web chạy Tesseract.js (tải model lần đầu)
+            // nên cần thanh tiến trình thay cho snackbar tự tắt sau 2 giây.
+            if (_isProcessingOcr) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.aiPurple.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.aiPurple,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _ocrStage ?? 'Đang quét ảnh…',
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.aiPurple,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: _ocrProgress,
+                        minHeight: 4,
+                        backgroundColor: Colors.white,
+                        color: AppTheme.aiPurple,
                       ),
                     ),
                   ],
