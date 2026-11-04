@@ -19,7 +19,7 @@ class MockAuthApi implements AuthApi {
   @override
   Future<AuthResponse> login(String username, String password) async {
     await Future.delayed(latency);
-    final user = username.trim();
+    final user = username.trim().toLowerCase();
     if (!_users.containsKey(user) || _users[user] != password) {
       throw ApiException(401, 'Đăng nhập thất bại.');
     }
@@ -38,7 +38,8 @@ class MockAuthApi implements AuthApi {
   @override
   Future<String> register(String username, String password) async {
     await Future.delayed(latency);
-    final user = username.trim();
+    // Canonical chữ thường: không cho tồn tại song song "Uyenne" và "uyenne".
+    final user = username.trim().toLowerCase();
 
     if (!_usernamePattern.hasMatch(user)) {
       throw ApiException(400, 'Tên đăng nhập phải từ 3–50 ký tự (chỉ chữ cái, số, dấu gạch dưới hoặc chấm).');

@@ -362,7 +362,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           controller: _registerUsernameController,
           decoration: const InputDecoration(
             labelText: 'Tên đăng nhập',
-            hintText: '3–50 ký tự',
+            hintText: '3–50 ký tự, không phân biệt hoa/thường',
             prefixIcon: Icon(Icons.person_add_outlined),
             isDense: true,
           ),
@@ -405,7 +405,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         ElevatedButton(
           onPressed: controller.isLoading ? null : _handleRegister,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.successGreen,
+            backgroundColor: AppTheme.primaryBlue,
           ),
           child: controller.isLoading
               ? const SizedBox(
@@ -427,7 +427,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _handleLogin() async {
-    final username = _loginUsernameController.text.trim();
+    // Tên đăng nhập không phân biệt hoa/thường: gửi dạng chữ thường để khớp canonical form.
+    final username = _loginUsernameController.text.trim().toLowerCase();
     final password = _loginPasswordController.text;
     if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -442,7 +443,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _handleRegister() async {
-    final username = _registerUsernameController.text.trim();
+    // Lưu canonical chữ thường: "Uyenne" và "uyenne" là cùng một tài khoản.
+    final username = _registerUsernameController.text.trim().toLowerCase();
     final password = _registerPasswordController.text;
     final confirm = _registerConfirmPasswordController.text;
 
