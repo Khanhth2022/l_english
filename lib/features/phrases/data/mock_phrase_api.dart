@@ -21,6 +21,7 @@ class MockPhraseApi implements PhraseApi {
     final now = DateTime.now().subtract(const Duration(days: 1));
     _phrases[_nextId] = Phrase(
       id: _nextId++,
+      title: 'Kể về ngày hôm qua',
       text: 'I has went to school yesterday with my best friends.',
       correctedText: 'I went to school yesterday with my best friends.',
       score: 6,
@@ -36,6 +37,7 @@ class MockPhraseApi implements PhraseApi {
 
     _phrases[_nextId] = Phrase(
       id: _nextId++,
+      title: 'Câu ghép với Although',
       text: 'Although it was raining heavily, but we still decided to go camping.',
       correctedText: 'Although it was raining heavily, we still decided to go camping.',
       score: 7,
@@ -51,6 +53,7 @@ class MockPhraseApi implements PhraseApi {
 
     _phrases[_nextId] = Phrase(
       id: _nextId++,
+      title: 'Tầm quan trọng của tiếng Anh',
       text: 'English has become an essential language in the modern globalization era.',
       correctedText: 'English has become an essential language in the modern globalization era.',
       score: 10,
@@ -62,18 +65,28 @@ class MockPhraseApi implements PhraseApi {
   @override
   Future<List<Phrase>> fetchPhrases() async {
     await Future.delayed(latency);
+    // Cùng thứ tự với backend: `GET /api/phrases` sắp theo id TĂNG dần.
     final list = _phrases.values.toList()
-      ..sort((a, b) => b.id.compareTo(a.id)); // Mới nhất lên đầu
+      ..sort((a, b) => a.id.compareTo(b.id));
     return list;
   }
 
   @override
-  Future<Phrase> createPhrase(String rawText) async {
+  Future<Phrase> createPhrase(String rawTitle, String rawText) async {
     await Future.delayed(latency + const Duration(milliseconds: 300));
+    final title = rawTitle.trim();
     final text = rawText.trim();
 
     if (simulateAiFailure) {
       throw ApiException(502, 'Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau.');
+    }
+
+    // Backend khai `title` là @NotBlank @Size(max = 255): mô phỏng đúng luật đó.
+    if (title.isEmpty) {
+      throw ApiException(400, 'Tiêu đề đoạn văn không được để trống.');
+    }
+    if (title.length > 255) {
+      throw ApiException(400, 'Tiêu đề đoạn văn tối đa 255 ký tự.');
     }
 
     if (text.length < 10) {
@@ -150,6 +163,7 @@ class MockPhraseApi implements PhraseApi {
     final id = _nextId++;
     final phrase = Phrase(
       id: id,
+      title: title,
       text: text,
       correctedText: corrected,
       score: calculatedScore,

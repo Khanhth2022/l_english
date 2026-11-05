@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/services/ocr/ocr_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../data/models/phrase_models.dart';
 import '../data/phrase_api.dart';
 import '../state/phrase_form_controller.dart';
 import '../state/phrase_list_controller.dart';
@@ -246,24 +247,10 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
     final controller = context.watch<PhraseFormController>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chấm đoạn văn bằng AI'),
-        actions: [
-          IconButton(
-            tooltip: 'Quét ảnh (OCR)',
-            icon: _isProcessingOcr
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.document_scanner_rounded),
-            onPressed: (_isProcessingOcr || controller.isGrading)
-                ? null
-                : () => _scanOcr(controller),
-          ),
-        ],
-      ),
+      // Chỉ còn MỘT lối vào OCR: nút "Quét ảnh (OCR)" trong thẻ nhập liệu.
+      // Trước đây AppBar có thêm icon cùng chức năng nên người dùng thấy 2 nút
+      // giống nhau trên cùng một màn hình.
+      appBar: AppBar(title: const Text('Chấm đoạn văn bằng AI')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
         child: Column(
@@ -414,6 +401,27 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
               ),
               const SizedBox(height: 14),
             ],
+
+            // Tiêu đề đoạn văn (act-11): backend bắt `title` 1–255 ký tự và chỉ
+            // lưu để hiển thị, không gửi cho AI. Để trống thì lưu với nhãn mặc
+            // định để sổ tay vẫn đọc được.
+            TextField(
+              controller: controller.titleController,
+              enabled: !controller.isGrading,
+              maxLength: PhraseFormController.titleMaxLength,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: 'Tiêu đề đoạn văn',
+                hintText:
+                    'Ví dụ: Luyện viết IELTS — để trống sẽ lưu là ${Phrase.untitledLabel}',
+                prefixIcon: const Icon(Icons.title_rounded),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 12),
 
             // Input TextField
             Card(
@@ -566,12 +574,19 @@ class _PhraseFormViewState extends State<_PhraseFormView> {
         context.read<PhraseListController>().addOrUpdatePhrase(result);
       } catch (_) {}
 
-      showModalBottomSheet<void>(
+      await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (_) => PhraseDetailSheet(phrase: result),
       );
+
+      // Đóng bảng kết quả = kết thúc lượt chấm: rời hẳn form để về danh sách
+      // PhraseList. Ở lại form thì lần bấm "Chấm điểm" tiếp theo sẽ lưu thêm
+      // một bản trùng của đúng đoạn văn đó.
+      if (context.mounted) {
+        Navigator.of(context).pop(true);
+      }
     }
   }
 }

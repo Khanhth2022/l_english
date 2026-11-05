@@ -89,8 +89,15 @@ class PhraseListController extends ChangeNotifier with SafeChangeNotifier {
     }
   }
 
+  /// Thêm/cập nhật một bài ngay sau khi chấm xong.
+  ///
+  /// Giữ đúng thứ tự của backend: `GET /api/phrases` trả về danh sách sắp theo
+  /// `id` TĂNG dần, nên bài vừa tạo (id lớn nhất) nằm ở CUỐI. Nếu chèn lên đầu
+  /// thì bài mới sẽ "nhảy" xuống cuối ngay lần tải lại kế tiếp.
   void addOrUpdatePhrase(Phrase phrase) {
-    _phrases = [phrase, ..._phrases.where((p) => p.id != phrase.id)];
+    final next = _phrases.where((p) => p.id != phrase.id).toList()..add(phrase);
+    next.sort((a, b) => a.id.compareTo(b.id));
+    _phrases = next;
     notifyListeners();
   }
 
