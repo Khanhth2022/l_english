@@ -8,6 +8,7 @@ import '../../../core/services/widget/widget_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../phrases/ui/phrase_form_screen.dart';
 import '../../words/data/word_api.dart';
+import '../../words/ui/topic_words_screen.dart';
 
 /// Màn hình tương tác và mô phỏng 4 tính năng tích hợp hệ điều hành Android (act-14..17).
 class AndroidFeaturesScreen extends StatefulWidget {
@@ -107,6 +108,16 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
     });
   }
 
+  /// Mở luồng "Thêm từ theo chủ đề với AI" (ACT-20).
+  Future<void> _openTopicWords() async {
+    final changed = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => const TopicWordsScreen()));
+    if (changed != true || !mounted) return;
+    _reloadDueCount();
+    _showMessage('Đã thêm từ theo chủ đề vào sổ từ của bạn.');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -167,6 +178,75 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
             ),
           ),
           const SizedBox(height: 20),
+
+          // Điểm riêng của app: AI sinh 10 từ theo chủ đề (ACT-20)
+          _buildFeatureCard(
+            icon: Icons.auto_awesome_rounded,
+            iconColor: AppTheme.aiPurple,
+            title: 'Thêm từ theo chủ đề với AI',
+            description:
+                'Điểm riêng của LEnglish: chỉ cần gõ một chủ đề như Công sở, '
+                'Du lịch hay Công nghệ, AI gợi ý ngay 10 từ vựng mới kèm nghĩa, '
+                'phiên âm, từ loại và câu ví dụ. Bạn tick chọn những từ muốn học '
+                'rồi lưu tất cả vào sổ từ trong một lần — không phải tra và nhập '
+                'tay từng từ.',
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.aiPurple.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: AppTheme.aiPurple.withValues(alpha: 0.15),
+                ),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.tips_and_updates_outlined,
+                        size: 16,
+                        color: AppTheme.aiPurple,
+                      ),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Cách dùng:',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.aiPurple,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    '1. Vào tab Từ vựng → bấm "Thêm từ" → chọn "Thêm từ theo chủ đề với AI".\n'
+                    '2. Nhập chủ đề hoặc chọn nhanh một gợi ý (Công sở, Du lịch, Công nghệ…).\n'
+                    '3. AI trả về 10 từ mới kèm nghĩa, phiên âm, từ loại và ví dụ; bỏ tick những từ không cần.\n'
+                    '4. Bấm "Lưu vào sổ từ" để thêm tất cả từ đã chọn.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppTheme.textMuted,
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            action: ElevatedButton.icon(
+              onPressed: _openTopicWords,
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: const Text('Thêm từ theo chủ đề'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.aiPurple,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // Tính năng 1: Scan OCR (act-17, seq-17)
           _buildFeatureCard(

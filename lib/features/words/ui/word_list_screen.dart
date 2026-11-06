@@ -7,9 +7,9 @@ import '../data/models/word.dart';
 import '../data/word_api.dart';
 import '../state/word_list_controller.dart';
 import 'widgets/word_card.dart';
+import 'widgets/word_detail_sheet.dart';
 import 'review_quiz_screen.dart';
 import 'word_form_screen.dart';
-import 'topic_words_screen.dart';
 
 /// Màn hình "Sổ từ của tôi" — chức năng Xem / Sửa / Xoá từ và Xác nhận ôn tập.
 class WordListScreen extends StatelessWidget {
@@ -32,8 +32,7 @@ class WordListScreen extends StatelessWidget {
     }
 
     return ChangeNotifierProvider(
-      create: (ctx) =>
-          WordListController(ctx.read<WordApi>())..load(),
+      create: (ctx) => WordListController(ctx.read<WordApi>())..load(),
       child: const _WordListView(),
     );
   }
@@ -145,10 +144,8 @@ class _WordListViewState extends State<_WordListView>
       final navigator = Navigator.of(context);
       final changed = await navigator.push<bool>(
         MaterialPageRoute(
-          builder: (_) => ReviewQuizScreen(
-            words: dueWords,
-            allWords: controller.words,
-          ),
+          builder: (_) =>
+              ReviewQuizScreen(words: dueWords, allWords: controller.words),
         ),
       );
       if (!mounted) return;
@@ -160,7 +157,10 @@ class _WordListViewState extends State<_WordListView>
     }
   }
 
-  Widget _buildReviewQuizBanner(BuildContext context, WordListController controller) {
+  Widget _buildReviewQuizBanner(
+    BuildContext context,
+    WordListController controller,
+  ) {
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 8, 14, 6),
       padding: const EdgeInsets.all(14),
@@ -187,7 +187,11 @@ class _WordListViewState extends State<_WordListView>
               color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 24),
+            child: const Icon(
+              Icons.psychology_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -205,10 +209,7 @@ class _WordListViewState extends State<_WordListView>
                 const SizedBox(height: 2),
                 const Text(
                   'Luyện trắc nghiệm để củng cố trí nhớ dài hạn.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12.5,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 12.5),
                 ),
               ],
             ),
@@ -218,7 +219,10 @@ class _WordListViewState extends State<_WordListView>
               backgroundColor: Colors.white,
               foregroundColor: AppTheme.primaryDark,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              textStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             onPressed: () => _startReviewQuiz(),
             child: const Text('Bắt đầu'),
@@ -228,18 +232,14 @@ class _WordListViewState extends State<_WordListView>
     );
   }
 
-  Future<void> _openTopicWords(
-    BuildContext context,
-    WordListController controller,
-  ) async {
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const TopicWordsScreen(),
-      ),
+  /// Xem chi tiết từ ở dạng chỉ đọc (ACT-5).
+  Future<void> _openDetail(BuildContext context, Word word) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => WordDetailSheet(word: word),
     );
-    if (changed == true && mounted) {
-      await controller.load();
-    }
   }
 
   @override
@@ -256,11 +256,6 @@ class _WordListViewState extends State<_WordListView>
                 ? null
                 : controller.load,
             icon: const Icon(Icons.refresh),
-          ),
-          IconButton(
-            tooltip: 'Thêm từ theo chủ đề (AI)',
-            icon: const Icon(Icons.auto_awesome, color: AppTheme.aiPurple),
-            onPressed: () => _openTopicWords(context, controller),
           ),
         ],
         bottom: TabBar(
@@ -292,7 +287,10 @@ class _WordListViewState extends State<_WordListView>
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.8),
+                  borderSide: const BorderSide(
+                    color: AppTheme.primaryBlue,
+                    width: 1.8,
+                  ),
                 ),
                 suffixIcon: controller.query.isEmpty
                     ? null
@@ -327,7 +325,8 @@ class _WordListViewState extends State<_WordListView>
                     borderRadius: BorderRadius.circular(6),
                     onTap: () {
                       final allSelected =
-                          controller.selectedCount == controller.visibleWords.length;
+                          controller.selectedCount ==
+                          controller.visibleWords.length;
                       for (final word in controller.visibleWords) {
                         final isSel = controller.isSelected(word.id);
                         if (allSelected && isSel) {
@@ -338,12 +337,16 @@ class _WordListViewState extends State<_WordListView>
                       }
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            controller.selectedCount == controller.visibleWords.length
+                            controller.selectedCount ==
+                                    controller.visibleWords.length
                                 ? Icons.deselect_rounded
                                 : Icons.select_all_rounded,
                             size: 15,
@@ -351,7 +354,8 @@ class _WordListViewState extends State<_WordListView>
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            controller.selectedCount == controller.visibleWords.length
+                            controller.selectedCount ==
+                                    controller.visibleWords.length
                                 ? 'Bỏ chọn'
                                 : 'Chọn tất cả',
                             style: const TextStyle(
@@ -404,6 +408,7 @@ class _WordListViewState extends State<_WordListView>
             showCheckbox: controller.onlyDue,
             selected: controller.isSelected(word.id),
             onToggleSelected: () => controller.toggleSelected(word.id),
+            onTap: () => _openDetail(context, word),
             onEdit: () => _openForm(context, controller, word),
             onDelete: () => _confirmDelete(context, controller, word),
           );
@@ -450,6 +455,9 @@ class _WordListViewState extends State<_WordListView>
         label: const Text('Thêm từ'),
       );
     }
+    // ACT-19: chỉ hiện nút "Đánh dấu là đã ôn" khi người dùng đã tick chọn từ.
+    // Nút cũ "Ôn tập (n)" trùng chức năng với banner "Bắt đầu" phía trên nên đã
+    // được bỏ; khi chưa chọn từ nào thì không có nút nổi nào.
     if (controller.selectedCount > 0) {
       return FloatingActionButton.extended(
         heroTag: 'word_list_review_fab',
@@ -463,17 +471,7 @@ class _WordListViewState extends State<_WordListView>
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.done_all),
-        label: Text('Đã ôn ${controller.selectedCount} từ'),
-      );
-    }
-    if (controller.dueCount > 0) {
-      return FloatingActionButton.extended(
-        heroTag: 'word_list_quiz_fab',
-        backgroundColor: AppTheme.aiPurple,
-        foregroundColor: Colors.white,
-        onPressed: () => _startReviewQuiz(),
-        icon: const Icon(Icons.quiz_rounded),
-        label: Text('Ôn tập (${controller.dueCount})'),
+        label: Text('Đánh dấu là đã ôn (${controller.selectedCount})'),
       );
     }
     return null;
@@ -500,7 +498,9 @@ class _WordListViewState extends State<_WordListView>
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Xoá từ "${word.english}"?'),
-        content: const Text('Từ cùng toàn bộ nghĩa của nó sẽ bị xoá khỏi sổ từ.'),
+        content: const Text(
+          'Từ cùng toàn bộ nghĩa của nó sẽ bị xoá khỏi sổ từ.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -546,9 +546,7 @@ class _WordListViewState extends State<_WordListView>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError
-            ? Theme.of(context).colorScheme.error
-            : null,
+        backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
       ),
     );
   }
