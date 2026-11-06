@@ -247,5 +247,98 @@ void main() {
       expect(find.text(scannedText), findsOneWidget);
       expect(find.text('${scannedText.length} ký tự'), findsOneWidget);
     });
+
+    testWidgets('Tiêu đề gõ trên form được gửi nguyên văn lên API (act-11)', (tester) async {
+      final recorder = _RecordingPhraseApi();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiProvider(
+            providers: [
+              Provider<PhraseApi>.value(value: recorder),
+              ChangeNotifierProvider<PhraseListController>(
+                create: (_) => PhraseListController(recorder),
+              ),
+            ],
+            child: const PhraseFormScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // TextField 0 = ô tiêu đề, TextField 1 = ô đoạn văn.
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(0), 'Luyện viết IELTS');
+      await tester.enterText(
+        fields.at(1),
+        'Although online learning is convenient, it requires self discipline.',
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Chấm điểm & Sửa lỗi'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Đây là điểm chốt: nếu tiêu đề không tới được API thì lỗi nằm ở FE.
+      expect(recorder.lastTitle, 'Luyện viết IELTS');
+      expect(recorder.lastText, contains('Although online learning'));
+      expect(recorder.lastTitle, isNot(Phrase.untitledLabel));
+    });
+
+    testWidgets('Để trống ô tiêu đề thì gửi nhãn mặc định (act-11)', (tester) async {      final recorder = _RecordingPhraseApi();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiProvider(
+            providers: [
+              Provider<PhraseApi>.value(value: recorder),
+              ChangeNotifierProvider<PhraseListController>(
+                create: (_) => PhraseListController(recorder),
+              ),
+            ],
+            child: const PhraseFormScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField).at(1),
+        'This sentence has no title but is long enough to pass validation.',
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Chấm điểm & Sửa lỗi'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(recorder.lastTitle, Phrase.untitledLabel);
+    });
   });
+}
+
+/// Fake API chỉ ghi lại tham số mà form gửi lên, dùng để kiểm chứng luồng
+/// "gõ tiêu đề → bấm chấm điểm" mà không phụ thuộc backend.
+class _RecordingPhraseApi implements PhraseApi {
+  String? lastTitle;
+  String? lastText;
+
+  @override
+  Future<Phrase> createPhrase(String title, String text) async {
+    lastTitle = title;
+    lastText = text;
+    return Phrase(
+      id: 99,
+      title: title,
+      text: text,
+      correctedText: text,
+      score: 10,
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+    );
+  }
+
+  @override
+  Future<List<Phrase>> fetchPhrases() async => const <Phrase>[];
+
+  @override
+  Future<void> deletePhrase(int id) async {}
 }
