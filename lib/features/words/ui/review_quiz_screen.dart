@@ -72,14 +72,20 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
     ];
 
     _questions = widget.words.map((word) {
-      final acceptedMeanings = word.values
-          .map((value) => value.vietnamese.trim())
-          .where((meaning) => meaning.isNotEmpty)
-          .toSet();
-      if (acceptedMeanings.isEmpty) {
-        acceptedMeanings.add('Không có nghĩa');
+      // Xáo trộn các nghĩa để mỗi phiên ôn có thể hỏi một nghĩa khác nhau
+      // của từ đa nghĩa, thay vì luôn lấy nghĩa đầu tiên.
+      final meanings =
+          word.values
+              .map((value) => value.vietnamese.trim())
+              .where((meaning) => meaning.isNotEmpty)
+              .toSet()
+              .toList()
+            ..shuffle(rng);
+      if (meanings.isEmpty) {
+        meanings.add('Không có nghĩa');
       }
-      final correctMeaning = acceptedMeanings.first;
+      final acceptedMeanings = meanings.toSet();
+      final correctMeaning = meanings.first;
 
       // Chọn 3 đáp án sai khác, không trùng bất kỳ nghĩa nào được chấp nhận.
       final distractors =
