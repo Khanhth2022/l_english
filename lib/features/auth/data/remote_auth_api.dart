@@ -26,16 +26,24 @@ class RemoteAuthApi implements AuthApi {
   });
 
   @override
-  Future<String> register(String username, String password) => _call(() async {
+  Future<String> register(
+    String username,
+    String password, {
+    required String name,
+  }) => _call(() async {
     final response = await _dio.post<Object?>(
       '/api/auth/register',
-      data: {'username': username, 'password': password},
+      data: {
+        'name': name.trim(),
+        'username': username,
+        'password': password,
+      },
     );
     final data = response.data;
     if (data is Map && data['message'] is String) {
       return data['message'] as String;
     }
-    return 'Đăng ký tài khoản thành công.';
+    return 'Tạo tài khoản thành công';
   });
 
   @override
@@ -58,6 +66,25 @@ class RemoteAuthApi implements AuthApi {
     }
     throw ApiException(0, 'Máy chủ không trả về token mới.');
   });
+
+  /// Tài khoản do Bearer token quyết định: body chỉ mang hai mật khẩu, đúng
+  /// hợp đồng §2.5 của backend.
+  @override
+  Future<String> changePassword(String currentPassword, String newPassword) =>
+      _call(() async {
+        final response = await _dio.post<Object?>(
+          '/api/auth/change-password',
+          data: {
+            'currentPassword': currentPassword,
+            'newPassword': newPassword,
+          },
+        );
+        final data = response.data;
+        if (data is Map && data['message'] is String) {
+          return data['message'] as String;
+        }
+        return 'Đổi mật khẩu thành công';
+      });
 
   Future<T> _call<T>(Future<T> Function() action) async {
     try {

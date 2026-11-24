@@ -52,14 +52,19 @@ class AuthController extends ChangeNotifier with SafeChangeNotifier {
     return false;
   }
 
-  Future<bool> register(String username, String password) async {
+  /// §5.1 — tạo tài khoản. `name` là tên hiển thị bắt buộc của backend.
+  Future<bool> register(
+    String username,
+    String password, {
+    required String name,
+  }) async {
     isLoading = true;
     errorMessage = null;
     successMessage = null;
     notifyListeners();
 
     try {
-      final message = await api.register(username, password);
+      final message = await api.register(username, password, name: name);
       successMessage = message;
       return true;
     } on ApiException catch (error) {
@@ -67,6 +72,33 @@ class AuthController extends ChangeNotifier with SafeChangeNotifier {
     } catch (e) {
       debugPrint('AuthController: đăng ký thất bại ($e).');
       errorMessage = 'Đăng ký không thành công. Vui lòng thử lại.';
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+    return false;
+  }
+
+  /// §2.5 — đổi mật khẩu của tài khoản đang đăng nhập.
+  ///
+  /// Không xoá phiên ở đây: access token hiện tại vẫn hợp lệ tới khi hết hạn,
+  /// còn refresh token thì backend đã thu hồi nên lần gia hạn kế tiếp sẽ đưa
+  /// người dùng về màn đăng nhập. Xoá token ngay sẽ đăng xuất người dùng giữa
+  /// lúc họ vừa đổi mật khẩu thành công.
+  Future<bool> changePassword(String currentPassword, String newPassword) async {
+    isLoading = true;
+    errorMessage = null;
+    successMessage = null;
+    notifyListeners();
+
+    try {
+      successMessage = await api.changePassword(currentPassword, newPassword);
+      return true;
+    } on ApiException catch (error) {
+      errorMessage = error.message;
+    } catch (e) {
+      debugPrint('AuthController: đổi mật khẩu thất bại ($e).');
+      errorMessage = 'Đổi mật khẩu không thành công. Vui lòng thử lại.';
     } finally {
       isLoading = false;
       notifyListeners();

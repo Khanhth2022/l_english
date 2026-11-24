@@ -22,6 +22,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   final _loginUsernameController = TextEditingController();
   final _loginPasswordController = TextEditingController();
 
+  final _registerNameController = TextEditingController();
   final _registerUsernameController = TextEditingController();
   final _registerPasswordController = TextEditingController();
   final _registerConfirmPasswordController = TextEditingController();
@@ -35,6 +36,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     _tabController.dispose();
     _loginUsernameController.dispose();
     _loginPasswordController.dispose();
+    _registerNameController.dispose();
     _registerUsernameController.dispose();
     _registerPasswordController.dispose();
     _registerConfirmPasswordController.dispose();
@@ -225,7 +227,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
                           // Form content
                           SizedBox(
-                            height: 270,
+                            height: 310,
                             child: TabBarView(
                               controller: _tabController,
                               children: [
@@ -359,6 +361,17 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
+          controller: _registerNameController,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Tên hiển thị',
+            hintText: '1–100 ký tự, hiện trong ứng dụng',
+            prefixIcon: Icon(Icons.badge_outlined),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
           controller: _registerUsernameController,
           decoration: const InputDecoration(
             labelText: 'Tên đăng nhập',
@@ -444,19 +457,32 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
   Future<void> _handleRegister() async {
     // Lưu canonical chữ thường: "Uyenne" và "uyenne" là cùng một tài khoản.
+    final name = _registerNameController.text.trim();
     final username = _registerUsernameController.text.trim().toLowerCase();
     final password = _registerPasswordController.text;
     final confirm = _registerConfirmPasswordController.text;
 
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tên hiển thị không được để trống.')),
+      );
+      return;
+    }
+    if (name.length > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tên hiển thị không được vượt quá 100 ký tự.')),
+      );
+      return;
+    }
     if (username.length < 3 || username.length > 50) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tên đăng nhập phải từ 3–50 ký tự.')),
+        const SnackBar(content: Text('Tên đăng nhập phải từ 3 đến 50 ký tự.')),
       );
       return;
     }
     if (password.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mật khẩu phải có tối thiểu 8 ký tự.')),
+        const SnackBar(content: Text('Mật khẩu phải có ít nhất 8 ký tự.')),
       );
       return;
     }
@@ -467,7 +493,11 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       return;
     }
 
-    final success = await context.read<AuthController>().register(username, password);
+    final success = await context.read<AuthController>().register(
+      username,
+      password,
+      name: name,
+    );
     if (success && mounted) {
       _tabController.animateTo(0);
       _loginUsernameController.text = username;
