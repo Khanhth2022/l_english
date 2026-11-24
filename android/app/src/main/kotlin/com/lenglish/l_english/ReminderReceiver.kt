@@ -20,6 +20,10 @@ class ReminderReceiver : BroadcastReceiver() {
         )
         if (!prefs.getBoolean(ReminderScheduler.KEY_ENABLED, false)) return
 
+        // Mỗi alarm chỉ chạy MỘT lần: hẹn ngay lần kế tiếp để chuỗi nhắc không
+        // đứt — kể cả khi lần này không đăng được thông báo vì thiếu quyền.
+        ReminderScheduler.scheduleStoredTime(context)
+
         // Android 13+ yêu cầu quyền POST_NOTIFICATIONS; thiếu quyền thì bỏ qua
         // thay vì crash.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -37,7 +41,7 @@ class ReminderReceiver : BroadcastReceiver() {
         }
         val contentIntent = PendingIntent.getActivity(
             context,
-            ReminderScheduler.NOTIFICATION_ID,
+            ReminderScheduler.CONTENT_INTENT_REQUEST_CODE,
             openApp,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -49,15 +53,35 @@ class ReminderReceiver : BroadcastReceiver() {
             Notification.Builder(context)
         }
 
+        val userName = prefs.getString(ReminderScheduler.KEY_USER_NAME, "").orEmpty().trim()
+        val title = if (userName.isEmpty()) {
+            "Đến giờ ôn từ vựng"
+        } else {
+            "Chào $userName, đến giờ ôn từ vựng"
+        }
+
         val notification = builder
             .setSmallIcon(R.drawable.ic_stat_review)
-            .setContentTitle("Đến giờ ôn từ vựng")
-            .setContentText("Bạn có từ cần ôn hôm nay. Mở LEnglish để ôn ngay.")
+            .setContentTitle(title)
+            // Không khẳng định "có N từ cần ôn": lời nhắc chạy theo giờ, không
+            // lọc theo số từ đến hạn nên câu đó có thể sai.
+            .setContentText("Mở LEnglish để xem hôm nay bạn cần ôn từ nào.")
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
             .build()
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(ReminderScheduler.NOTIFICATION_ID, notification)
+
+        // Mỗi lần báo dùng một id mới và huỷ thông báo của lần trước: dùng lại
+        // một id cố định thì Android chỉ cập nhật im lặng thông báo cũ, người
+        // dùng tưởng lần nhắc thứ hai không nổ (và khay bị dồn thông báo).
+        val previousId = prefs.getInt(ReminderScheduler.KEY_LAST_NOTIFICATION_ID, -1)
+        if (previousId >= 0) manager.cancel(previousId)
+
+        val notificationId = ReminderPlanner.notificationId(System.currentTimeMillis())
+        manager.notify(notificationId, notification)
+        prefs.edit()
+            .putInt(ReminderScheduler.KEY_LAST_NOTIFICATION_ID, notificationId)
+            .apply()
     }
 }

@@ -7,6 +7,7 @@ import '../../../core/services/reminder/reminder_service.dart';
 import '../../../core/services/widget/widget_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../phrases/ui/phrase_form_screen.dart';
+import '../../users/state/user_profile_controller.dart';
 import '../../words/data/word_api.dart';
 import '../../words/ui/topic_words_screen.dart';
 
@@ -57,6 +58,7 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
         ? await ReminderService.schedule(
             hour: _notificationTime.hour,
             minute: _notificationTime.minute,
+            userName: _reminderUserName(),
           )
         : await ReminderService.cancel();
     if (!mounted) return;
@@ -83,6 +85,7 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
     final ok = await ReminderService.schedule(
       hour: picked.hour,
       minute: picked.minute,
+      userName: _reminderUserName(),
     );
     if (!mounted) return;
     _showMessage(
@@ -95,6 +98,14 @@ class _AndroidFeaturesScreenState extends State<AndroidFeaturesScreen> {
   String _formatTime(TimeOfDay time) =>
       '${time.hour.toString().padLeft(2, '0')}:'
       '${time.minute.toString().padLeft(2, '0')}';
+
+  /// Tên in vào thông báo nhắc ôn tập: ưu tiên tên hiển thị trong hồ sơ, nếu
+  /// hồ sơ chưa tải xong thì dùng tên đăng nhập.
+  String? _reminderUserName() {
+    final display = context.read<UserProfileController>().displayName?.trim();
+    if (display != null && display.isNotEmpty) return display;
+    return context.read<TokenStore>().currentUsername;
+  }
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(

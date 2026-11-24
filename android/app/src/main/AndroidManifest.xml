@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- Lời nhắc ôn tập cần nổ đúng giờ người dùng chọn. Trên Android 12+ nếu
+         quyền này chưa được cấp, app vẫn hẹn alarm sống qua Doze (có thể trễ). -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <application
         android:label="LEnglish"
         android:name="${applicationName}"
@@ -73,7 +76,9 @@
             android:enabled="true"
             android:exported="true">
             <intent-filter>
+                <!-- Khởi động lại máy và cài bản cập nhật đều xoá alarm đã hẹn. -->
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 
