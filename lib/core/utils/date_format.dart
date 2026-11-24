@@ -5,7 +5,8 @@ String formatDate(DateTime date) {
   return '$day/$month/${date.year}';
 }
 
-String formatDateOrDash(DateTime? date) => date == null ? '—' : formatDate(date);
+String formatDateOrDash(DateTime? date) =>
+    date == null ? '—' : formatDate(date);
 
 /// Mô tả lịch ôn kế tiếp so với hiện tại.
 String formatDueLabel(DateTime? nextReview, DateTime now) {
@@ -15,6 +16,16 @@ String formatDueLabel(DateTime? nextReview, DateTime now) {
   if (days == 0) return 'đến hạn hôm nay';
   if (days == 1) return 'ôn lại ngày mai';
   return 'ôn lại ${formatDate(nextReview)}';
+}
+
+/// Từ đang tới hạn ôn (đến hạn hôm nay hoặc đã quá hạn) — dùng để tô đỏ
+/// nhắc nhở trên thẻ từ.
+///
+/// Từ mới (`nextReview == null`) vẫn được nhắc "chưa ôn lần nào" nhưng không
+/// tính là quá hạn, nên giữ màu trung tính.
+bool isDueForReview(DateTime? nextReview, DateTime now) {
+  if (nextReview == null) return false;
+  return _dayDifference(nextReview, now) <= 0;
 }
 
 int _dayDifference(DateTime target, DateTime now) {

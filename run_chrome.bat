@@ -1,6 +1,6 @@
 @echo off
 title Chay LEnglish tren Chrome (Tat CORS Dev Mode)
-set BACKEND_URL=https://kristal-nondichotomous-conclusionally.ngrok-free.dev
+set BACKEND_URL=http://localhost:8080
 if not "%~1"=="" set BACKEND_URL=%~1
 echo Dang khoi chay LEnglish tren Google Chrome (Disable CORS Web Security)
 echo Backend URL: %BACKEND_URL%

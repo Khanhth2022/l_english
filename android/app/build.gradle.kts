@@ -75,6 +75,12 @@ kotlin {
     }
 }
 
+dependencies {
+    // Unit test JVM cho phần tính giờ của lời nhắc ôn tập (ReminderPlanner),
+    // không cần thiết bị/emulator Android.
+    testImplementation("junit:junit:4.13.2")
+}
+
 flutter {
     source = "../.."
 }

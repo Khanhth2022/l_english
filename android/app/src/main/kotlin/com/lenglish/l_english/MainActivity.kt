@@ -1,13 +1,16 @@
 package com.lenglish.l_english
 
 import android.Manifest
+import android.app.AlarmManager
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -31,6 +34,16 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleIntent(intent)
+        // Cài bản mới/khởi động lại app có thể xoá alarm đã hẹn; đặt lại ngay để
+        // lời nhắc không "câm" cho tới lần bật lại công tắc.
+        ReminderScheduler.rescheduleIfEnabled(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Người dùng có thể vừa cấp quyền báo chính xác trong Settings, khi đó
+        // alarm cũ (inexact) được thay bằng alarm chính xác.
+        ReminderScheduler.rescheduleIfEnabled(this)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -101,8 +114,16 @@ class MainActivity : FlutterActivity() {
                 "scheduleReminder" -> {
                     val hour = call.argument<Int>("hour") ?: 20
                     val minute = call.argument<Int>("minute") ?: 0
+                    val userName = call.argument<String>("userName")
                     requestNotificationPermissionIfNeeded()
-                    ReminderScheduler.schedule(context, hour, minute)
+                    // Không có quyền báo chính xác thì alarm vẫn được hẹn, nhưng
+                    // có thể trễ vài phút — xin quyền để "đặt lại giờ" nổ đúng giờ.
+                    requestExactAlarmAccessIfNeeded()
+                    ReminderScheduler.schedule(context, hour, minute, userName)
+                    result.success(true)
+                }
+                "setReminderUserName" -> {
+                    ReminderScheduler.setUserName(context, call.argument<String>("userName"))
                     result.success(true)
                 }
                 "cancelReminder" -> {
@@ -128,6 +149,30 @@ class MainActivity : FlutterActivity() {
             arrayOf(Manifest.permission.POST_NOTIFICATIONS),
             REQUEST_POST_NOTIFICATIONS
         )
+    }
+
+    /**
+     * Android 12+ coi quyền báo chính xác là quyền đặc biệt: chỉ mở được trang
+     * cài đặt chứ không hỏi bằng hộp thoại. Chỉ hỏi một lần để không mở Settings
+     * lặp lại mỗi lần người dùng đổi giờ.
+     */
+    private fun requestExactAlarmAccessIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val alarmManager = getSystemService(AlarmManager::class.java)
+        if (alarmManager?.canScheduleExactAlarms() == true) return
+
+        val prefs = getSharedPreferences(ReminderScheduler.PREFS_NAME, MODE_PRIVATE)
+        if (prefs.getBoolean(ReminderScheduler.KEY_ASKED_EXACT_ALARM, false)) return
+        prefs.edit().putBoolean(ReminderScheduler.KEY_ASKED_EXACT_ALARM, true).apply()
+
+        runCatching {
+            startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.parse("package:$packageName")
+                )
+            )
+        }
     }
 
     override fun onRequestPermissionsResult(

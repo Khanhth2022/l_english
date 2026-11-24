@@ -81,9 +81,9 @@ void main() {
       await tester.tap(find.text('curious'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Đã ôn 2 từ'), findsOneWidget);
+      expect(find.text('Đánh dấu là đã ôn (2)'), findsOneWidget);
 
-      await tester.tap(find.text('Đã ôn 2 từ'));
+      await tester.tap(find.text('Đánh dấu là đã ôn (2)'));
       await tester.pumpAndSettle();
 
       expect(

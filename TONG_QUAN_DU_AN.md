@@ -154,7 +154,7 @@ flutter run --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://
 ```
 
 - `USE_MOCK_API` mặc định **`false`** (dùng backend thật).
-- Base URL mặc định trong code: `https://kristal-nondichotomous-conclusionally.ngrok-free.dev`.
+- Base URL mặc định trong code: `http://10.0.2.2:8080` (máy ảo Android trỏ về `localhost` của máy chạy emulator); đổi bằng `--dart-define=API_BASE_URL=...`.
 - Timeout: connect 10s, receive 30s.
 - Có thể đổi Base URL lúc chạy từ màn hình đăng nhập hoặc `ConnectionSettingsScreen`; **không lưu qua lần khởi động sau**.
 - Script tiện dụng: `run_app.bat`, `run_chrome.bat`, `run_emulator.bat`, `build_apk.bat`.
@@ -211,9 +211,9 @@ Thư mục `TaiLieuThietKe/`:
 
 ## 10. Điểm cần lưu ý / rủi ro
 
-1. **Token không được lưu bền:** `InMemoryTokenStore` chỉ giữ RAM → tắt app phải đăng nhập lại. Chưa có `flutter_secure_storage`.
-2. **ACT-14 chưa thật:** chỉ có toggle + chọn giờ trên UI, chưa có native notification/WorkManager.
-3. **Base URL đã thống nhất:** `app_config.dart`, widget fallback, `README.md`, `run_chrome.bat`, `run_emulator.bat` cùng dùng `https://kristal-nondichotomous-conclusionally.ngrok-free.dev` (tunnel ngrok tạm thời có thể hết hạn).
+1. ~~**Token không được lưu bền**~~ — đã dùng `SecureTokenStore` (`flutter_secure_storage`, Keychain/EncryptedSharedPreferences), `main.dart` gọi `restore()` trước khi dựng UI.
+2. ~~**ACT-14 chưa thật**~~ — đã có native `ReminderScheduler.kt`, `ReminderReceiver.kt`, `BootReceiver.kt`; UI chỉ gọi qua `ReminderService`.
+3. **Base URL mặc định:** `app_config.dart` dùng `http://10.0.2.2:8080` (máy ảo); `run_emulator.bat` dùng cùng URL, `run_chrome.bat` dùng `http://localhost:8080`; đều ghi đè được bằng tham số dòng lệnh hoặc `--dart-define=API_BASE_URL=...`.
 4. **README lệch code:** README ghi Mock là mặc định, nhưng `USE_MOCK_API` mặc định `false`.
 5. **Release ký bằng debug keystore** (`signingConfig = debug`) — không phù hợp phát hành store.
 6. **`usesCleartextTraffic="true"`** — cho phép HTTP không mã hóa.

@@ -16,6 +16,7 @@ class WordCard extends StatelessWidget {
     this.showCheckbox = false,
     this.selected = false,
     this.onToggleSelected,
+    this.onTap,
     this.onEdit,
     this.onDelete,
   });
@@ -25,6 +26,14 @@ class WordCard extends StatelessWidget {
   final bool showCheckbox;
   final bool selected;
   final VoidCallback? onToggleSelected;
+
+  /// Chạm vào thẻ để xem thông tin từ ở dạng chỉ đọc.
+  ///
+  /// Ở tab "Ôn tập" (`showCheckbox == true`) thao tác chạm dùng để tick chọn từ
+  /// nên [onToggleSelected] được ưu tiên.
+  final VoidCallback? onTap;
+
+  /// Sửa từ — chỉ mở từ menu thao tác, không mở khi chạm vào thẻ.
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -44,10 +53,12 @@ class WordCard extends StatelessWidget {
           width: selected ? 1.6 : 1,
         ),
       ),
-      color: selected ? AppTheme.primaryBlue.withValues(alpha: 0.04) : Colors.white,
+      color: selected
+          ? AppTheme.primaryBlue.withValues(alpha: 0.04)
+          : Colors.white,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: showCheckbox ? onToggleSelected : onEdit,
+        onTap: showCheckbox ? onToggleSelected : onTap,
         child: Padding(
           padding: EdgeInsets.fromLTRB(showCheckbox ? 6 : 16, 12, 6, 12),
           child: Row(
@@ -80,7 +91,11 @@ class WordCard extends StatelessWidget {
                         value: 'edit',
                         child: Row(
                           children: [
-                            Icon(Icons.edit_outlined, size: 18, color: AppTheme.primaryBlue),
+                            Icon(
+                              Icons.edit_outlined,
+                              size: 18,
+                              color: AppTheme.primaryBlue,
+                            ),
                             SizedBox(width: 10),
                             Text('Sửa từ'),
                           ],
@@ -91,9 +106,16 @@ class WordCard extends StatelessWidget {
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(Icons.delete_outline, size: 18, color: AppTheme.errorRed),
+                            Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: AppTheme.errorRed,
+                            ),
                             SizedBox(width: 10),
-                            Text('Xoá từ', style: TextStyle(color: AppTheme.errorRed)),
+                            Text(
+                              'Xoá từ',
+                              style: TextStyle(color: AppTheme.errorRed),
+                            ),
                           ],
                         ),
                       ),
@@ -107,6 +129,7 @@ class WordCard extends StatelessWidget {
   }
 
   Widget _buildBody(BuildContext context, ThemeData theme, DateTime current) {
+    final dueNow = isDueForReview(word.nextReview, current);
     final firstValue = word.values.isNotEmpty ? word.values.first : null;
     final pronunciation = firstValue?.pronunciation;
     final hasPronunciation =
@@ -165,7 +188,10 @@ class WordCard extends StatelessWidget {
                 ),
               if (hasPos)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(4),
@@ -252,7 +278,9 @@ class WordCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    word.reviewCount == 0 ? 'Từ mới' : 'Đã ôn ${word.reviewCount} lần',
+                    word.reviewCount == 0
+                        ? 'Từ mới'
+                        : 'Đã ôn ${word.reviewCount} lần',
                     style: TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
@@ -267,24 +295,29 @@ class WordCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: dueNow ? AppTheme.errorBg : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(6),
+                border: dueNow
+                    ? Border.all(
+                        color: AppTheme.errorRed.withValues(alpha: 0.25),
+                      )
+                    : null,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.schedule_rounded,
                     size: 13,
-                    color: AppTheme.textMuted,
+                    color: dueNow ? AppTheme.errorRed : AppTheme.textMuted,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     formatDueLabel(word.nextReview, current),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textMuted,
+                      fontWeight: dueNow ? FontWeight.w700 : FontWeight.w500,
+                      color: dueNow ? AppTheme.errorRed : AppTheme.textMuted,
                     ),
                   ),
                 ],
@@ -332,11 +365,7 @@ class _LevelChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: fg,
-        ),
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
       ),
     );
   }

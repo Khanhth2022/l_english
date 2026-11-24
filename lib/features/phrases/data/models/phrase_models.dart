@@ -33,6 +33,7 @@ class GrammarError {
 class Phrase {
   const Phrase({
     required this.id,
+    this.title = '',
     required this.text,
     required this.correctedText,
     required this.score,
@@ -41,7 +42,16 @@ class Phrase {
     this.errors = const [],
   });
 
+  /// Nhãn thay thế khi người dùng để trống ô tiêu đề. Backend bắt `title`
+  /// không rỗng (1–255 ký tự) nên app phải gửi nhãn này thay vì chuỗi rỗng.
+  static const String untitledLabel = '[Không có tiêu đề]';
+
   final int id;
+
+  /// Tiêu đề người dùng đặt cho đoạn văn; KHÔNG gửi cho AI chấm.
+  /// Dữ liệu tạo trước migration V2 có thể là chuỗi rỗng.
+  final String title;
+
   final String text;
   final String correctedText;
 
@@ -52,8 +62,32 @@ class Phrase {
   final DateTime? updatedAt;
   final List<GrammarError> errors;
 
+  /// Tiêu đề để hiển thị: rơi về [untitledLabel] khi dữ liệu cũ không có tiêu đề.
+  String get displayTitle => title.trim().isEmpty ? untitledLabel : title.trim();
+
+  /// Thứ tự hiển thị của sổ tay: mới nhất trước.
+  ///
+  /// Khớp đúng thứ tự backend trả về cho `GET /api/phrases`
+  /// (`ORDER BY createdAt DESC, id DESC`), nên bài vừa tạo đứng đầu cả khi
+  /// chèn tại chỗ lẫn sau khi tải lại danh sách. `createdAt` có thể null ở dữ
+  /// liệu cũ: các bài đó xếp sau, và `id` là tiêu chí phụ (id lớn hơn = mới hơn).
+  static int newestFirst(Phrase a, Phrase b) {
+    final aCreatedAt = a.createdAt;
+    final bCreatedAt = b.createdAt;
+    if (aCreatedAt != null && bCreatedAt != null) {
+      final byCreatedAt = bCreatedAt.compareTo(aCreatedAt);
+      if (byCreatedAt != 0) return byCreatedAt;
+    } else if (aCreatedAt != null) {
+      return -1;
+    } else if (bCreatedAt != null) {
+      return 1;
+    }
+    return b.id.compareTo(a.id);
+  }
+
   factory Phrase.fromJson(Map<String, dynamic> json) => Phrase(
         id: asInt(json['id']) ?? 0,
+        title: asString(json['title']),
         text: asString(json['text']),
         correctedText: asString(json['correctedText']),
         score: asInt(json['score']) ?? 0,
@@ -64,6 +98,7 @@ class Phrase {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'title': title,
         'text': text,
         'correctedText': correctedText,
         'score': score,

@@ -12,6 +12,9 @@ import 'features/home/main_screen.dart';
 import 'features/phrases/data/mock_phrase_api.dart';
 import 'features/phrases/data/phrase_api.dart';
 import 'features/phrases/state/phrase_list_controller.dart';
+import 'features/users/data/mock_user_api.dart';
+import 'features/users/data/user_api.dart';
+import 'features/users/state/user_profile_controller.dart';
 import 'features/words/data/word_api.dart';
 import 'features/words/state/word_list_controller.dart';
 
@@ -23,6 +26,7 @@ class LEnglishApp extends StatelessWidget {
     required this.wordApi,
     this.authApi,
     this.phraseApi,
+    this.userApi,
     this.dio,
   });
 
@@ -30,12 +34,14 @@ class LEnglishApp extends StatelessWidget {
   final WordApi wordApi;
   final AuthApi? authApi;
   final PhraseApi? phraseApi;
+  final UserApi? userApi;
   final Dio? dio;
 
   @override
   Widget build(BuildContext context) {
     final effectiveAuthApi = authApi ?? MockAuthApi();
     final effectivePhraseApi = phraseApi ?? MockPhraseApi();
+    final effectiveUserApi = userApi ?? MockUserApi();
 
     return MultiProvider(
       providers: [
@@ -44,9 +50,13 @@ class LEnglishApp extends StatelessWidget {
         Provider<WordApi>.value(value: wordApi),
         Provider<AuthApi>.value(value: effectiveAuthApi),
         Provider<PhraseApi>.value(value: effectivePhraseApi),
+        Provider<UserApi>.value(value: effectiveUserApi),
         ChangeNotifierProvider<AuthController>(
           create: (ctx) =>
               AuthController(api: effectiveAuthApi, tokenStore: tokenStore),
+        ),
+        ChangeNotifierProvider<UserProfileController>(
+          create: (ctx) => UserProfileController(api: effectiveUserApi),
         ),
         ChangeNotifierProvider<WordListController>(
           create: (ctx) =>

@@ -12,6 +12,9 @@ import 'features/auth/data/remote_auth_api.dart';
 import 'features/phrases/data/mock_phrase_api.dart';
 import 'features/phrases/data/phrase_api.dart';
 import 'features/phrases/data/remote_phrase_api.dart';
+import 'features/users/data/mock_user_api.dart';
+import 'features/users/data/remote_user_api.dart';
+import 'features/users/data/user_api.dart';
 import 'features/words/data/mock_word_api.dart';
 import 'features/words/data/remote_word_api.dart';
 import 'features/words/data/word_api.dart';
@@ -28,22 +31,26 @@ void main() async {
   );
   await tokenStore.restore();
 
+  final apiClient = createApiClient(tokenStore);
+
+  // Giữ tham chiếu tới mock auth để mock hồ sơ đọc lại được tên đã lưu lúc đăng ký.
+  final MockAuthApi? mockAuthApi =
+      AppConfig.useMockApi ? MockAuthApi() : null;
+  final AuthApi authApi = mockAuthApi ?? RemoteAuthApi(apiClient);
+
   if (AppConfig.useMockApi && !tokenStore.hasSession) {
-    // Khởi tạo phiên thử nghiệm mặc định để người dùng khám phá ngay ứng dụng
+    // Khởi tạo phiên thử nghiệm mặc định để người dùng khám phá ngay ứng dụng.
+    // Đăng nhập thật qua mock (thay vì tự đặt token giả) để mock biết tài khoản
+    // đang dùng — nhờ đó Đổi mật khẩu hoạt động ngay từ phiên demo đầu tiên.
+    final demo = await authApi.login('user1', 'password123');
     await tokenStore.save(
-      const TokenPair(
-        accessToken: 'mock_jwt_access_user1_init',
-        refreshToken: 'mock_jwt_refresh_user1_init',
+      TokenPair(
+        accessToken: demo.accessToken,
+        refreshToken: demo.refreshToken,
       ),
       username: 'user1',
     );
   }
-
-  final apiClient = createApiClient(tokenStore);
-
-  final AuthApi authApi = AppConfig.useMockApi
-      ? MockAuthApi()
-      : RemoteAuthApi(apiClient);
 
   final WordApi wordApi = AppConfig.useMockApi
       ? MockWordApi()
@@ -53,12 +60,20 @@ void main() async {
       ? MockPhraseApi()
       : RemotePhraseApi(apiClient);
 
+  final UserApi userApi = mockAuthApi != null
+      ? MockUserApi(
+          usernameProvider: () => tokenStore.currentUsername,
+          nameProvider: mockAuthApi.displayNameOf,
+        )
+      : RemoteUserApi(apiClient);
+
   runApp(
     LEnglishApp(
       tokenStore: tokenStore,
       authApi: authApi,
       wordApi: wordApi,
       phraseApi: phraseApi,
+      userApi: userApi,
       dio: apiClient,
     ),
   );

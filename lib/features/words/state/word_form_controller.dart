@@ -82,10 +82,19 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
     rows = (existing == null || existing.values.isEmpty)
         ? [WordValueRow()]
         : existing.values.map(WordValueRow.fromValue).toList();
+
+    // Ảnh chụp dữ liệu ban đầu để biết người dùng đã thay đổi gì chưa (ACT-6/7).
+    _initialEnglish = englishController.text.trim();
+    _initialLevel = level;
+    _initialValues = _currentValues();
   }
 
   final WordApi api;
   final Word? _existing;
+
+  late final String _initialEnglish;
+  late final Level? _initialLevel;
+  late final List<WordValue> _initialValues;
 
   final TextEditingController englishController = TextEditingController();
   Level? level;
@@ -98,6 +107,38 @@ class WordFormController extends ChangeNotifier with SafeChangeNotifier {
   bool get isEditing => _existing != null;
 
   String get title => isEditing ? 'Sửa từ' : 'Thêm từ';
+
+  /// Người dùng đã nhập/sửa gì so với dữ liệu ban đầu hay chưa.
+  ///
+  /// Dùng cho hộp thoại xác nhận thoát (ACT-6/7) và để bỏ qua hộp thoại
+  /// "Thay thế nghĩa đã nhập?" khi form vẫn còn nguyên dữ liệu gốc.
+  ///
+  /// Các [TextEditingController] của từng dòng không phát thông báo thay đổi,
+  /// nên đây là getter tính tại chỗ thay vì một cờ `dirty` cập nhật dần.
+  bool get hasChanges {
+    if (englishController.text.trim() != _initialEnglish) return true;
+    if (level != _initialLevel) return true;
+
+    final current = _currentValues();
+    if (current.length != _initialValues.length) return true;
+    for (var index = 0; index < current.length; index++) {
+      if (!_sameValue(current[index], _initialValues[index])) return true;
+    }
+    return false;
+  }
+
+  /// Có ít nhất một nghĩa người dùng đã nhập (dùng để hỏi trước khi AI ghi đè).
+  bool get hasEnteredValues => rows.any((row) => !row.isBlank);
+
+  List<WordValue> _currentValues() =>
+      rows.where((row) => !row.isBlank).map((row) => row.toValue()).toList();
+
+  static bool _sameValue(WordValue a, WordValue b) =>
+      a.vietnamese == b.vietnamese &&
+      a.example == b.example &&
+      a.exampleTranslation == b.exampleTranslation &&
+      a.pronunciation == b.pronunciation &&
+      a.partOfSpeech == b.partOfSpeech;
 
   void setLevel(Level? value) {
     level = value;

@@ -12,21 +12,51 @@ class MockAuthApi implements AuthApi {
 
   final Duration latency;
   final Map<String, String> _users = {};
-  final Set<String> _activeRefreshTokens = {};
+
+  /// Tên hiển thị theo từng tài khoản (cột `users.name` bên backend).
+  final Map<String, String> _names = {};
+
+  /// refresh token → username sở hữu, để thu hồi đúng phiên của một tài khoản.
+  final Map<String, String> _refreshTokenOwners = {};
+
+  /// Tài khoản của phiên hiện tại: backend lấy từ Bearer token, mock giữ lại
+  /// user đăng nhập gần nhất (đăng xuất thì xoá).
+  String? _sessionUser;
+
+  /// Tên hiển thị đã lưu của một tài khoản (dùng cho test và màn hồ sơ).
+  String? displayNameOf(String username) =>
+      _names[username.trim().toLowerCase()];
+
+  /// Bộ đếm giúp hai token phát trong cùng một mili-giây vẫn khác nhau —
+  /// rotation phải luôn cho ra refresh token mới, kể cả khi đồng hồ chưa nhích.
+  int _tokenSequence = 0;
+
+  String _issueToken(String kind, String user) =>
+      'mock_jwt_${kind}_${user}_${DateTime.now().millisecondsSinceEpoch}_${_tokenSequence++}';
 
   static final RegExp _usernamePattern = RegExp(r'^[A-Za-z0-9_.]{3,50}$');
 
+  /// Độ trễ giả lập. Với latency 0 phải trả về ngay: trong widget test
+  /// `Future.delayed(Duration.zero)` vẫn là một timer của fake async và chỉ
+  /// chạy khi test pump thời gian, nên chờ nó sẽ treo test.
+  Future<void> _wait() async {
+    if (latency > Duration.zero) {
+      await Future.delayed(latency);
+    }
+  }
+
   @override
   Future<AuthResponse> login(String username, String password) async {
-    await Future.delayed(latency);
-    final user = username.trim();
+    await _wait();
+    final user = username.trim().toLowerCase();
     if (!_users.containsKey(user) || _users[user] != password) {
-      throw ApiException(401, 'Đăng nhập thất bại.');
+      throw ApiException(401, 'Đăng nhập thất bại');
     }
 
-    final accessToken = 'mock_jwt_access_${user}_${DateTime.now().millisecondsSinceEpoch}';
-    final refreshToken = 'mock_jwt_refresh_${user}_${DateTime.now().millisecondsSinceEpoch}';
-    _activeRefreshTokens.add(refreshToken);
+    final accessToken = _issueToken('access', user);
+    final refreshToken = _issueToken('refresh', user);
+    _refreshTokenOwners[refreshToken] = user;
+    _sessionUser = user;
 
     return AuthResponse(
       accessToken: accessToken,
@@ -36,46 +66,89 @@ class MockAuthApi implements AuthApi {
   }
 
   @override
-  Future<String> register(String username, String password) async {
-    await Future.delayed(latency);
-    final user = username.trim();
+  Future<String> register(
+    String username,
+    String password, {
+    required String name,
+  }) async {
+    await _wait();
+    // Canonical chữ thường: không cho tồn tại song song "Uyenne" và "uyenne".
+    final user = username.trim().toLowerCase();
+    final displayName = name.trim();
 
+    // Thứ tự kiểm tra và câu chữ bám RegisterForm của backend (feature/name).
+    if (displayName.isEmpty) {
+      throw ApiException(400, 'Tên không được để trống');
+    }
+    if (displayName.length > 100) {
+      throw ApiException(400, 'Tên không được vượt quá 100 ký tự');
+    }
     if (!_usernamePattern.hasMatch(user)) {
-      throw ApiException(400, 'Tên đăng nhập phải từ 3–50 ký tự (chỉ chữ cái, số, dấu gạch dưới hoặc chấm).');
+      throw ApiException(400, 'Tên đăng nhập phải từ 3 đến 50 ký tự');
     }
     if (password.length < 8) {
-      throw ApiException(400, 'Mật khẩu phải có ít nhất 8 ký tự.');
+      throw ApiException(400, 'Mật khẩu phải có ít nhất 8 ký tự');
     }
     if (_users.containsKey(user)) {
-      throw ApiException(409, 'Tên đăng nhập đã tồn tại.');
+      throw ApiException(409, 'Tên đăng nhập đã tồn tại');
     }
 
     _users[user] = password;
-    return 'Tạo tài khoản thành công.';
+    _names[user] = displayName;
+    return 'Tạo tài khoản thành công';
   }
 
   @override
   Future<void> logout(String refreshToken) async {
-    await Future.delayed(latency);
-    _activeRefreshTokens.remove(refreshToken);
+    await _wait();
+    final owner = _refreshTokenOwners.remove(refreshToken);
+    if (owner != null && !_refreshTokenOwners.containsValue(owner)) {
+      _sessionUser = null;
+    }
   }
 
   @override
   Future<AuthResponse> refresh(String refreshToken) async {
-    await Future.delayed(latency);
-    if (!_activeRefreshTokens.contains(refreshToken)) {
-      throw ApiException(401, 'Phiên đăng nhập hết hạn.');
+    await _wait();
+    final owner = _refreshTokenOwners.remove(refreshToken);
+    if (owner == null) {
+      throw ApiException(401, 'Phiên đăng nhập hết hạn');
     }
 
-    _activeRefreshTokens.remove(refreshToken); // Token rotation: xoá token cũ
-    final newAccess = 'mock_jwt_access_refreshed_${DateTime.now().millisecondsSinceEpoch}';
-    final newRefresh = 'mock_jwt_refresh_rotated_${DateTime.now().millisecondsSinceEpoch}';
-    _activeRefreshTokens.add(newRefresh);
+    final newAccess = _issueToken('access', owner);
+    final newRefresh = _issueToken('refresh', owner);
+    _refreshTokenOwners[newRefresh] = owner;
 
     return AuthResponse(
       accessToken: newAccess,
       refreshToken: newRefresh,
       expiresIn: 900,
     );
+  }
+
+  /// §2.5 — kiểm tra đúng thứ tự backend: ràng buộc body, sai mật khẩu hiện
+  /// tại, rồi dùng lại mật khẩu cũ. Thành công thì thu hồi mọi refresh token
+  /// của tài khoản, giống `PasswordTxService` bên Spring Boot.
+  @override
+  Future<String> changePassword(String currentPassword, String newPassword) async {
+    await _wait();
+
+    final user = _sessionUser;
+    if (user == null || !_users.containsKey(user)) {
+      throw ApiException(401, 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+    }
+    if (newPassword.length < 8) {
+      throw ApiException(400, 'Mật khẩu mới phải có ít nhất 8 ký tự');
+    }
+    if (_users[user] != currentPassword) {
+      throw ApiException(400, 'Mật khẩu hiện tại không đúng');
+    }
+    if (currentPassword == newPassword) {
+      throw ApiException(400, 'Mật khẩu mới phải khác mật khẩu hiện tại');
+    }
+
+    _users[user] = newPassword;
+    _refreshTokenOwners.removeWhere((_, owner) => owner == user);
+    return 'Đổi mật khẩu thành công';
   }
 }

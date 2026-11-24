@@ -7,6 +7,7 @@ import '../data/models/word.dart';
 import '../data/word_api.dart';
 import '../state/word_form_controller.dart';
 import '../state/word_list_controller.dart';
+import 'topic_words_screen.dart';
 import 'widgets/word_value_editor.dart';
 
 /// Màn hình Thêm từ / Sửa từ.
@@ -41,154 +42,188 @@ class _WordFormView extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<WordFormController>();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(controller.title),
-        actions: [
-          TextButton.icon(
-            onPressed: controller.saving ? null : () => _save(context),
-            icon: const Icon(Icons.save_outlined),
-            label: const Text('Lưu'),
-          ),
-        ],
-      ),
-      body: AbsorbPointer(
-        absorbing: controller.saving,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextField(
-              controller: controller.englishController,
-              autocorrect: false,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Từ tiếng Anh *',
-                hintText: 'ví dụ: resilient',
-                border: OutlineInputBorder(),
-                helperText:
-                    'Phải là tiếng Anh và không trùng từ đã có trong sổ '
-                    '(trùng sẽ báo lỗi 409).',
-              ),
+    return PopScope(
+      // Luôn tự xử lý nút back để hỏi lại khi người dùng đã nhập/sửa dữ liệu
+      // (ACT-6/7). Không dùng `canPop` động vì các ô nhập không phát thông báo.
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        await _handleExit(context);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(controller.title),
+          actions: [
+            TextButton.icon(
+              onPressed: controller.saving ? null : () => _save(context),
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('Lưu'),
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<Level>(
-              key: ValueKey(controller.level),
-              initialValue: controller.level,
-              decoration: const InputDecoration(
-                labelText: 'Trình độ (CEFR)',
-                border: OutlineInputBorder(),
-              ),
-              hint: const Text('Chưa chọn'),
-              items: [
-                for (final level in Level.values)
-                  DropdownMenuItem(value: level, child: Text(level.wire)),
-              ],
-              onChanged: controller.setLevel,
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.tonalIcon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.aiBg,
-                  foregroundColor: AppTheme.aiPurple,
-                ),
-                onPressed: controller.generating
-                    ? null
-                    : () => _generate(context),
-                icon: controller.generating
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppTheme.aiPurple,
-                        ),
-                      )
-                    : const Icon(Icons.auto_awesome),
-                label: Text(
-                  controller.generating
-                      ? 'Đang nhờ AI…'
-                      : 'Gợi ý nghĩa bằng AI',
+          ],
+        ),
+        body: AbsorbPointer(
+          absorbing: controller.saving,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              TextField(
+                controller: controller.englishController,
+                autocorrect: false,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Từ tiếng Anh *',
+                  hintText: 'ví dụ: resilient',
+                  border: OutlineInputBorder(),
+                  helperText:
+                      'Phải là tiếng Anh và không trùng từ đã có trong sổ '
+                      '(trùng sẽ báo lỗi 409).',
                 ),
               ),
-            ),
-            if (controller.notice != null) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+              const SizedBox(height: 16),
+              DropdownButtonFormField<Level>(
+                key: ValueKey(controller.level),
+                initialValue: controller.level,
+                decoration: const InputDecoration(
+                  labelText: 'Trình độ (CEFR)',
+                  border: OutlineInputBorder(),
                 ),
-                decoration: BoxDecoration(
-                  color: AppTheme.aiBg,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: AppTheme.aiPurple.withValues(alpha: 0.2),
+                hint: const Text('Chưa chọn'),
+                items: [
+                  for (final level in Level.values)
+                    DropdownMenuItem(value: level, child: Text(level.wire)),
+                ],
+                onChanged: controller.setLevel,
+              ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.aiBg,
+                    foregroundColor: AppTheme.aiPurple,
+                  ),
+                  onPressed: controller.generating
+                      ? null
+                      : () => _generate(context),
+                  icon: controller.generating
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.aiPurple,
+                          ),
+                        )
+                      : const Icon(Icons.auto_awesome),
+                  label: Text(
+                    controller.generating
+                        ? 'Đang nhờ AI…'
+                        : 'Gợi ý nghĩa bằng AI',
                   ),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.auto_awesome,
-                      size: 16,
-                      color: AppTheme.aiPurple,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        controller.notice!,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.aiPurple,
-                        ),
+              ),
+              // ACT-20: chức năng AI sinh 10 từ theo chủ đề nằm ngay trong màn
+              // hình thêm từ (trước đây là icon ở AppBar nên khó tìm).
+              if (!controller.isEditing) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.aiPurple,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(
+                        color: AppTheme.aiPurple.withValues(alpha: 0.45),
                       ),
                     ),
-                  ],
+                    onPressed: controller.generating || controller.saving
+                        ? null
+                        : () => _openTopicWords(context),
+                    icon: const Icon(Icons.topic_rounded, size: 18),
+                    label: const Text('Thêm từ theo chủ đề với AI'),
+                  ),
+                ),
+              ],
+              if (controller.notice != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.aiBg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.aiPurple.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 16,
+                        color: AppTheme.aiPurple,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          controller.notice!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.aiPurple,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Nghĩa của từ',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: controller.addRow,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Thêm nghĩa'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              for (final (index, row) in controller.rows.indexed)
+                Padding(
+                  key: ObjectKey(row),
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: WordValueEditor(
+                    row: row,
+                    index: index,
+                    canRemove: controller.rows.length > 1,
+                    onRemove: () => controller.removeRow(row),
+                    onPartOfSpeechChanged: (value) =>
+                        controller.setPartOfSpeech(row, value),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: controller.saving ? null : () => _save(context),
+                icon: const Icon(Icons.save_outlined),
+                label: Text(
+                  controller.isEditing ? 'Cập nhật từ' : 'Thêm vào sổ từ',
                 ),
               ),
             ],
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Nghĩa của từ',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: controller.addRow,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Thêm nghĩa'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            for (final (index, row) in controller.rows.indexed)
-              Padding(
-                key: ObjectKey(row),
-                padding: const EdgeInsets.only(bottom: 12),
-                child: WordValueEditor(
-                  row: row,
-                  index: index,
-                  canRemove: controller.rows.length > 1,
-                  onRemove: () => controller.removeRow(row),
-                  onPartOfSpeechChanged: (value) =>
-                      controller.setPartOfSpeech(row, value),
-                ),
-              ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: controller.saving ? null : () => _save(context),
-              icon: const Icon(Icons.save_outlined),
-              label: Text(
-                controller.isEditing ? 'Cập nhật từ' : 'Thêm vào sổ từ',
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -208,10 +243,66 @@ class _WordFormView extends StatelessWidget {
     Navigator.of(context).pop(true);
   }
 
+  /// Mở luồng AI sinh 10 từ theo chủ đề (ACT-20).
+  Future<void> _openTopicWords(BuildContext context) async {
+    final changed = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => const TopicWordsScreen()));
+    if (changed == true && context.mounted) {
+      _showMessage(context, 'Đã thêm từ theo chủ đề vào sổ từ của bạn.');
+    }
+  }
+
+  /// Xác nhận thoát khi người dùng đã nhập/sửa dữ liệu (ACT-6/7).
+  Future<void> _handleExit(BuildContext context) async {
+    final controller = context.read<WordFormController>();
+    if (!controller.hasChanges) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    final shouldLeave = await _confirmExit(
+      context,
+      isEditing: controller.isEditing,
+    );
+    if (shouldLeave == true && context.mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<bool?> _confirmExit(BuildContext context, {required bool isEditing}) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Thoát mà không lưu?'),
+        content: Text(
+          isEditing
+              ? 'Bạn đã sửa thông tin của từ này. Nếu thoát bây giờ, các thay '
+                    'đổi sẽ không được lưu.'
+              : 'Bạn đã nhập thông tin cho từ mới. Nếu thoát bây giờ, từ này '
+                    'sẽ không được thêm vào sổ.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Ở lại'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Thoát'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _generate(BuildContext context) async {
     final controller = context.read<WordFormController>();
 
-    final hasManualValues = controller.rows.any((row) => !row.isBlank);
+    // ACT-7: dữ liệu chưa thay đổi so với ban đầu thì không cần hỏi lại —
+    // AI ghi đè cũng không làm mất công sức nhập liệu nào của người dùng.
+    final hasManualValues =
+        controller.hasEnteredValues && controller.hasChanges;
     if (hasManualValues) {
       final replace = await showDialog<bool>(
         context: context,
@@ -224,7 +315,7 @@ class _WordFormView extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Giữ nguyên'),
+              child: const Text('Thoát'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),

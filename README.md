@@ -139,14 +139,14 @@ Khi tiếp tục mở rộng hoặc refactor codebase, **bắt buộc tuân th�
   flutter run
   ```
 
-* **Chạy kết nối Backend Spring Boot thật:**
-  * Với Backend qua Cloudflare Tunnel (chạy trên Máy ảo Android):
-    ```bash
-    flutter run -d android --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://kristal-nondichotomous-conclusionally.ngrok-free.dev
-    ```
+* **Chạy kết nối Backend Spring Boot thật** (`USE_MOCK_API` mặc định `false`; Base URL mặc định của app cũng là `http://10.0.2.2:8080`):
   * Với Android Emulator nội bộ (`10.0.2.2` trỏ về localhost máy chủ):
     ```bash
     flutter run --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=http://10.0.2.2:8080
+    ```
+  * Với Backend qua Tunnel (Cloudflare/ngrok) hoặc máy khác trong LAN:
+    ```bash
+    flutter run -d android --no-pub --dart-define=USE_MOCK_API=false --dart-define=API_BASE_URL=https://<ten-tunnel>.trycloudflare.com
     ```
   * Hoặc nhấp đúp chạy nhanh file kịch bản có sẵn: [`run_chrome.bat`](run_chrome.bat) hoặc [`run_emulator.bat`](run_emulator.bat).
 

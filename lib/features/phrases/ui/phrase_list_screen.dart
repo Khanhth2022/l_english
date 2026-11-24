@@ -230,14 +230,27 @@ class PhraseListScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Tiêu đề người dùng đặt (act-11). Đoạn văn tạo trước
+                        // migration V2 không có tiêu đề → hiển thị nhãn mặc định.
+                        Text(
+                          phrase.displayTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textMain,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
                         Text(
                           phrase.text,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textMain,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.textMuted,
                             height: 1.35,
                           ),
                         ),
@@ -309,8 +322,12 @@ class PhraseListScreen extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
+        // Nêu rõ tiêu đề để người dùng biết đang xoá bài nào (ACT-10).
         title: const Text('Xóa đoạn văn này?'),
-        content: const Text('Đoạn văn cùng kết quả chấm điểm của AI sẽ bị xóa vĩnh viễn.'),
+        content: Text(
+          '"${phrase.displayTitle}" cùng kết quả chấm điểm của AI '
+          'sẽ bị xóa vĩnh viễn.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(false),
@@ -330,7 +347,9 @@ class PhraseListScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(error ?? 'Đã xóa đoạn văn thành công.'),
+            content: Text(
+              error ?? 'Đã xóa đoạn văn "${phrase.displayTitle}".',
+            ),
             backgroundColor: error != null ? AppTheme.errorRed : null,
           ),
         );

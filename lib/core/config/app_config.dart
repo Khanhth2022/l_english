@@ -9,10 +9,12 @@ import '../services/widget/widget_service.dart';
 class AppConfig {
   AppConfig._();
 
-  /// Địa chỉ backend Spring Boot mặc định biên dịch.
+  /// Địa chỉ backend Spring Boot mặc định biên dịch: máy ảo Android (10.0.2.2 trỏ về
+  /// `localhost` của máy tính đang chạy emulator, cổng 8080 của Spring Boot).
+  /// Có thể ghi đè khi build bằng `--dart-define=API_BASE_URL=http://...`.
   static const String defaultApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://kristal-nondichotomous-conclusionally.ngrok-free.dev',
+    defaultValue: 'http://10.0.2.2:8080',
   );
 
   /// Địa chỉ backend Spring Boot đang được sử dụng trong phiên làm việc.

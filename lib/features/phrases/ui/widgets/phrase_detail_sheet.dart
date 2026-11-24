@@ -58,6 +58,35 @@ class PhraseDetailSheet extends StatelessWidget {
                   controller: scrollController,
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
                   children: [
+                    // Tiêu đề đoạn văn người dùng đặt khi chấm (act-11).
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(
+                            Icons.bookmark_outline,
+                            size: 18,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            phrase.displayTitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textMain,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
                     // Score Card
                     Container(
                       padding: const EdgeInsets.all(20),

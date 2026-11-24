@@ -30,10 +30,10 @@ class RemotePhraseApi implements PhraseApi {
       });
 
   @override
-  Future<Phrase> createPhrase(String text) => _call(() async {
+  Future<Phrase> createPhrase(String title, String text) => _call(() async {
         final response = await _dio.post<Object?>(
           _basePath,
-          data: {'text': text},
+          data: {'title': title, 'text': text},
         );
         final data = response.data;
         final phraseMap = data is Map

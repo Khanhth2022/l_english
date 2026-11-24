@@ -60,7 +60,7 @@ class PhraseListController extends ChangeNotifier with SafeChangeNotifier {
     try {
       final phrases = await _api.fetchPhrases();
       if (_tokenStore?.hasSession == false) return;
-      _phrases = phrases;
+      _phrases = [...phrases]..sort(Phrase.newestFirst);
       status = PhraseListStatus.success;
     } on ApiException catch (error) {
       if (_tokenStore?.hasSession == false) return;
@@ -89,8 +89,16 @@ class PhraseListController extends ChangeNotifier with SafeChangeNotifier {
     }
   }
 
+  /// Thêm/cập nhật một bài ngay sau khi chấm xong.
+  ///
+  /// Bài mới đứng ĐẦU danh sách ngay từ lần build này: nó có `createdAt` mới
+  /// nhất và `id` lớn nhất, đúng thứ tự backend trả về (`createdAt DESC, id
+  /// DESC`), nên danh sách không "nhảy" vị trí khi tải lại. Trước đây hàm này
+  /// sắp id tăng dần nên bài mới nằm cuối rồi nhảy lên đầu sau lần tải lại.
   void addOrUpdatePhrase(Phrase phrase) {
-    _phrases = [phrase, ..._phrases.where((p) => p.id != phrase.id)];
+    final next = _phrases.where((p) => p.id != phrase.id).toList()..add(phrase);
+    next.sort(Phrase.newestFirst);
+    _phrases = next;
     notifyListeners();
   }
 
