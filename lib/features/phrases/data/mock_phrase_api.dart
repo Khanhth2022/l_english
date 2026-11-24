@@ -65,10 +65,9 @@ class MockPhraseApi implements PhraseApi {
   @override
   Future<List<Phrase>> fetchPhrases() async {
     await Future.delayed(latency);
-    // Cùng thứ tự với backend: `GET /api/phrases` sắp theo id TĂNG dần.
-    final list = _phrases.values.toList()
-      ..sort((a, b) => a.id.compareTo(b.id));
-    return list;
+    // Cùng thứ tự với backend: `GET /api/phrases` trả mới nhất trước
+    // (`ORDER BY createdAt DESC, id DESC`).
+    return _phrases.values.toList()..sort(Phrase.newestFirst);
   }
 
   @override

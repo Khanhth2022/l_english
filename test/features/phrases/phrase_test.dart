@@ -203,33 +203,69 @@ void main() {
       await tester.runAsync(listController.load);
       await tester.pump();
 
-      // Danh sách sắp theo id tăng dần (giống backend) → bài cũ nhất nằm đầu.
+      // Danh sách mới nhất trước (giống backend) → bài tạo gần đây nhất nằm đầu.
       await tester.tap(find.byIcon(Icons.more_vert).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Xóa bài này').first);
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('"Kể về ngày hôm qua"'),
+        find.textContaining('"Tầm quan trọng của tiếng Anh"'),
         findsOneWidget,
       );
     });
 
-    test('Bài mới chấm xong được thêm vào cuối, giữ thứ tự id tăng dần như backend', () async {
+    test('Đoạn văn vừa chấm xong nằm ở ĐẦU danh sách ngay, không cần tải lại', () async {
       await listController.load();
       final before = listController.phrases.map((p) => p.id).toList();
-      expect(before, orderedEquals([...before]..sort()));
 
-      formController.setText('A brand new sentence appended at the end of the notebook.');
+      formController.setText('A brand new sentence that must appear first immediately.');
       final created = await formController.submitForGrading();
       expect(created, isNotNull);
 
       listController.addOrUpdatePhrase(created!);
 
       final after = listController.phrases;
-      expect(after.last.id, created.id);
-      final ids = after.map((p) => p.id).toList();
-      expect(ids, orderedEquals([...ids]..sort()));
+      expect(after.first.id, created.id);
+      // Các bài cũ giữ nguyên thứ tự tương đối phía sau bài mới.
+      expect(after.skip(1).map((p) => p.id), orderedEquals(before));
+    });
+
+    test('Tải lại danh sách không làm bài mới "nhảy" vị trí: vẫn mới nhất trước', () async {
+      await listController.load();
+      formController.setText('Reloading the list must keep this sentence at the top.');
+      final created = await formController.submitForGrading();
+      listController.addOrUpdatePhrase(created!);
+      final beforeReload = listController.phrases.map((p) => p.id).toList();
+
+      await listController.load();
+      final afterReload = listController.phrases.map((p) => p.id).toList();
+
+      expect(afterReload, orderedEquals(beforeReload));
+      expect(afterReload.first, created.id);
+    });
+
+    testWidgets('Thẻ đầu tiên trong danh sách là đoạn văn vừa thêm (act-10)', (tester) async {
+      await tester.runAsync(listController.load);
+      formController.setText('The newest graded sentence must head the list.');
+      final created = await tester.runAsync(formController.submitForGrading);
+      listController.addOrUpdatePhrase(created!);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ChangeNotifierProvider<PhraseListController>.value(
+            value: listController,
+            child: const PhraseListScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final firstCard = find.byType(Card).first;
+      expect(
+        find.descendant(of: firstCard, matching: find.text(created.displayTitle)),
+        findsOneWidget,
+      );
     });
 
     testWidgets('PhraseFormScreen hỗ trợ initialText từ tính năng quét OCR hoặc bôi đen', (tester) async {
