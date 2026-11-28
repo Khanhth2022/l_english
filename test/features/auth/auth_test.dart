@@ -33,36 +33,86 @@ void main() {
       expect(controller.errorMessage, 'Đăng nhập thất bại');
     });
 
-    test('Đăng ký tài khoản mới thành công và lưu tên hiển thị', () async {
+    test('Đăng ký bước 1 chỉ ghi bản nháp, chưa đăng nhập được', () async {
       final success = await controller.register(
-        'newuser',
-        '12345678',
         name: 'Nguyễn Văn A',
+        username: 'newuser',
+        email: 'newuser@example.com',
+        password: '12345678',
       );
       expect(success, isTrue);
+      expect(controller.successMessage, 'Mã xác thực đã được gửi tới email');
+
+      // Chưa xác thực thì users chưa có dòng nào: đăng nhập phải thất bại.
+      final loginBefore = await controller.login('newuser', '12345678');
+      expect(loginBefore, isFalse);
+      expect(controller.errorMessage, 'Đăng nhập thất bại');
+    });
+
+    test('Xác thực mã đúng tạo tài khoản và đăng nhập được', () async {
+      await controller.register(
+        name: 'Nguyễn Văn A',
+        username: 'newuser',
+        email: 'newuser@example.com',
+        password: '12345678',
+      );
+
+      final confirmed = await controller.confirmRegistration(
+        'newuser@example.com',
+        MockAuthApi.debugRegistrationCode,
+      );
+      expect(confirmed, isTrue);
       expect(controller.successMessage, 'Tạo tài khoản thành công');
       expect(api.displayNameOf('newuser'), 'Nguyễn Văn A');
 
-      // Đăng nhập được ngay sau khi tạo
-      final loginSuccess = await controller.login('newuser', '12345678');
-      expect(loginSuccess, isTrue);
+      // Đăng nhập bằng username, không phải email.
+      expect(await controller.login('newuser', '12345678'), isTrue);
+    });
+
+    test('Xác thực sai mã trả 400 và tài khoản vẫn chưa tồn tại', () async {
+      await controller.register(
+        name: 'Nguyễn Văn A',
+        username: 'newuser',
+        email: 'newuser@example.com',
+        password: '12345678',
+      );
+
+      expect(
+        await controller.confirmRegistration('newuser@example.com', '000000'),
+        isFalse,
+      );
+      expect(controller.errorMessage, 'Mã xác thực không đúng hoặc đã hết hạn');
+      expect(await controller.login('newuser', '12345678'), isFalse);
     });
 
     test('Đăng ký trùng tên đăng nhập trả 409', () async {
       final success = await controller.register(
-        'user1',
-        '12345678',
         name: 'Nguyễn Văn A',
+        username: 'user1',
+        email: 'khac@example.com',
+        password: '12345678',
       );
       expect(success, isFalse);
       expect(controller.errorMessage, 'Tên đăng nhập đã tồn tại');
     });
 
+    test('Đăng ký trùng email trả 409', () async {
+      final success = await controller.register(
+        name: 'Nguyễn Văn A',
+        username: 'newuser',
+        email: 'user1@example.com',
+        password: '12345678',
+      );
+      expect(success, isFalse);
+      expect(controller.errorMessage, 'Email này đã được sử dụng');
+    });
+
     test('Đăng ký thiếu tên hiển thị trả 400 như backend', () async {
       final success = await controller.register(
-        'newuser',
-        '12345678',
         name: '   ',
+        username: 'newuser',
+        email: 'newuser@example.com',
+        password: '12345678',
       );
       expect(success, isFalse);
       expect(controller.errorMessage, 'Tên không được để trống');
@@ -70,9 +120,10 @@ void main() {
 
     test('Tên hiển thị dài hơn 100 ký tự bị từ chối', () async {
       final success = await controller.register(
-        'newuser',
-        '12345678',
         name: 'a' * 101,
+        username: 'newuser',
+        email: 'newuser@example.com',
+        password: '12345678',
       );
       expect(success, isFalse);
       expect(controller.errorMessage, 'Tên không được vượt quá 100 ký tự');
@@ -99,7 +150,9 @@ void main() {
       expect(() => api.refresh(oldRefresh), throwsA(anything));
     });
 
-    testWidgets('tab Tạo tài khoản có ô Tên hiển thị và không tràn layout', (tester) async {
+    testWidgets('tab Tạo tài khoản có ô Tên hiển thị và không tràn layout', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ChangeNotifierProvider<AuthController>(
           create: (_) => AuthController(api: api, tokenStore: tokenStore),
@@ -112,6 +165,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Tên hiển thị'), findsOneWidget);
+      expect(find.text('Email'), findsOneWidget);
       expect(find.text('Xác nhận lại mật khẩu'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

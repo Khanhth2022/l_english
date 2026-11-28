@@ -110,7 +110,16 @@ void main() {
 
     test('tên đã lưu lúc đăng ký hiện ra trong hồ sơ (nameProvider)', () async {
       final authApi = MockAuthApi(latency: Duration.zero);
-      await authApi.register('bob', '12345678', name: 'Bob Lê');
+      await authApi.register(
+        name: 'Bob Lê',
+        username: 'bob',
+        email: 'bob@example.com',
+        password: '12345678',
+      );
+      await authApi.confirmRegistration(
+        'bob@example.com',
+        MockAuthApi.debugRegistrationCode,
+      );
 
       final userApi = MockUserApi(
         latency: Duration.zero,

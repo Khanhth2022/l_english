@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../state/auth_controller.dart';
+import 'forgot_password_screen.dart';
+import 'register_confirm_screen.dart';
+import 'widgets/auth_form_widgets.dart';
 
 /// Màn hình đăng nhập và đăng ký tài khoản theo đúng tài liệu thiết kế (act-01, act-02).
 class AuthScreen extends StatefulWidget {
@@ -24,8 +27,16 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
   final _registerNameController = TextEditingController();
   final _registerUsernameController = TextEditingController();
+  final _registerEmailController = TextEditingController();
   final _registerPasswordController = TextEditingController();
   final _registerConfirmPasswordController = TextEditingController();
+
+  /// Backend bắt buộc username 3–50 ký tự, chỉ chữ/số/chấm/gạch dưới.
+  static final RegExp _usernamePattern = RegExp(r'^[A-Za-z0-9_.]{3,50}$');
+  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  /// BCrypt chỉ dùng 72 byte đầu nên backend từ chối mật khẩu dài hơn.
+  static const int _maxPasswordBytes = 72;
 
   bool _obscureLoginPassword = true;
   bool _obscureRegisterPassword = true;
@@ -38,6 +49,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     _loginPasswordController.dispose();
     _registerNameController.dispose();
     _registerUsernameController.dispose();
+    _registerEmailController.dispose();
     _registerPasswordController.dispose();
     _registerConfirmPasswordController.dispose();
     super.dispose();
@@ -227,7 +239,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
                           // Form content
                           SizedBox(
-                            height: 310,
+                            height: 430,
                             child: TabBarView(
                               controller: _tabController,
                               children: [
@@ -334,6 +346,19 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             ),
           ),
         ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: controller.isLoading ? null : _openForgotPassword,
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: const Text('Quên mật khẩu?'),
+          ),
+        ),
         const Spacer(),
         ElevatedButton(
           onPressed: controller.isLoading ? null : _handleLogin,
@@ -375,8 +400,20 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           controller: _registerUsernameController,
           decoration: const InputDecoration(
             labelText: 'Tên đăng nhập',
-            hintText: '3–50 ký tự, không phân biệt hoa/thường',
+            hintText: '3–50 ký tự, chữ/số/chấm/gạch dưới',
             prefixIcon: Icon(Icons.person_add_outlined),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _registerEmailController,
+          keyboardType: TextInputType.emailAddress,
+          autofillHints: const [AutofillHints.email],
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            hintText: 'Nhận mã xác thực, cũng là kênh khôi phục mật khẩu',
+            prefixIcon: Icon(Icons.alternate_email_rounded),
             isDense: true,
           ),
         ),
@@ -412,6 +449,16 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               ),
               onPressed: () => setState(() => _obscureRegisterConfirmPassword = !_obscureRegisterConfirmPassword),
             ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Tài khoản chỉ được tạo sau khi bạn nhập mã 6 số gửi tới email. '
+          'Sau đó đăng nhập bằng tên đăng nhập — không phải email.',
+          style: TextStyle(
+            fontSize: 12,
+            color: AppTheme.textMuted,
+            height: 1.35,
           ),
         ),
         const Spacer(),
@@ -455,54 +502,97 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     }
   }
 
+  /// Mở luồng quên mật khẩu (bước 1 → bước 2).
+  ///
+  /// Khi đặt lại thành công, `AuthController.successMessage` đang giữ câu
+  /// "Đặt lại mật khẩu thành công" nên banner xanh của màn đăng nhập tự hiện;
+  /// chỉ cần xoá mật khẩu cũ người dùng vừa gõ.
+  Future<void> _openForgotPassword() async {
+    final authController = context.read<AuthController>();
+    authController.clearMessages();
+
+    final reset = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+    );
+    if (!mounted || reset != true) return;
+    _loginPasswordController.clear();
+  }
+
+  /// Đăng ký 2 bước theo act-01: bước 1 chỉ gửi form để nhận mã, bước 2 mới
+  /// tạo tài khoản. Sau khi xác thực, quay về tab Đăng nhập với username đã
+  /// điền sẵn — backend không cấp token ở bước xác thực.
   Future<void> _handleRegister() async {
     // Lưu canonical chữ thường: "Uyenne" và "uyenne" là cùng một tài khoản.
     final name = _registerNameController.text.trim();
     final username = _registerUsernameController.text.trim().toLowerCase();
+    final email = _registerEmailController.text.trim().toLowerCase();
     final password = _registerPasswordController.text;
     final confirm = _registerConfirmPasswordController.text;
 
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tên hiển thị không được để trống.')),
-      );
-      return;
+      return _showRegisterError('Tên hiển thị không được để trống.');
     }
     if (name.length > 100) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tên hiển thị không được vượt quá 100 ký tự.')),
-      );
-      return;
+      return _showRegisterError('Tên hiển thị không được vượt quá 100 ký tự.');
     }
     if (username.length < 3 || username.length > 50) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tên đăng nhập phải từ 3 đến 50 ký tự.')),
+      return _showRegisterError('Tên đăng nhập phải từ 3 đến 50 ký tự.');
+    }
+    if (!_usernamePattern.hasMatch(username)) {
+      return _showRegisterError(
+        'Tên đăng nhập chỉ được chứa chữ cái, số, dấu chấm và gạch dưới.',
       );
-      return;
+    }
+    if (email.length > 254 || !_emailPattern.hasMatch(email)) {
+      return _showRegisterError('Email không hợp lệ.');
     }
     if (password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mật khẩu phải có ít nhất 8 ký tự.')),
+      return _showRegisterError('Mật khẩu phải có ít nhất 8 ký tự.');
+    }
+    if (utf8ByteLength(password) > _maxPasswordBytes) {
+      return _showRegisterError(
+        'Mật khẩu không được vượt quá $_maxPasswordBytes byte.',
       );
-      return;
     }
     if (password != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mật khẩu xác nhận không khớp.')),
-      );
-      return;
+      return _showRegisterError('Mật khẩu xác nhận không khớp.');
     }
 
-    final success = await context.read<AuthController>().register(
-      username,
-      password,
+    final authController = context.read<AuthController>();
+    final success = await authController.register(
       name: name,
+      username: username,
+      email: email,
+      password: password,
     );
-    if (success && mounted) {
-      _tabController.animateTo(0);
-      _loginUsernameController.text = username;
-      _loginPasswordController.text = password;
-    }
+    if (!success || !mounted) return;
+
+    final confirmed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => RegisterConfirmScreen(
+          name: name,
+          username: username,
+          email: email,
+          password: password,
+          notice: authController.successMessage,
+        ),
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+
+    // Controller đang giữ "Tạo tài khoản thành công" nên banner xanh của màn
+    // đăng nhập tự hiện; chỉ cần chuyển tab và điền sẵn username.
+    _tabController.animateTo(0);
+    _loginUsernameController.text = username;
+    _loginPasswordController.clear();
+    _registerPasswordController.clear();
+    _registerConfirmPasswordController.clear();
+  }
+
+  void _showRegisterError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _showBaseUrlDialog() async {

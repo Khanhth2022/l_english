@@ -1,10 +1,9 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../state/auth_controller.dart';
+import 'widgets/auth_form_widgets.dart';
 
 /// Màn hình đổi mật khẩu — API §2.5 `POST /api/auth/change-password`.
 ///
@@ -45,9 +44,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final authController = context.watch<AuthController>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Đổi mật khẩu'),
-      ),
+      appBar: AppBar(title: const Text('Đổi mật khẩu')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(18),
@@ -55,7 +52,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             const _SessionNotice(),
             const SizedBox(height: 14),
             if (authController.errorMessage != null) ...[
-              _MessageBanner(
+              AuthMessageBanner(
                 icon: Icons.error_outline,
                 color: AppTheme.errorRed,
                 background: AppTheme.errorBg,
@@ -81,7 +78,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           labelText: 'Mật khẩu hiện tại',
                           prefixIcon: const Icon(Icons.lock_outline),
                           isDense: true,
-                          suffixIcon: _VisibilityToggle(
+                          suffixIcon: PasswordVisibilityToggle(
                             obscure: _obscureCurrent,
                             onPressed: () => setState(
                               () => _obscureCurrent = !_obscureCurrent,
@@ -92,7 +89,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Nhập mật khẩu hiện tại.';
                           }
-                          if (_utf8Length(value) > _maxPasswordBytes) {
+                          if (utf8ByteLength(value) > _maxPasswordBytes) {
                             return 'Mật khẩu không được vượt quá '
                                 '$_maxPasswordBytes byte.';
                           }
@@ -110,7 +107,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           labelText: 'Mật khẩu mới (≥ 8 ký tự)',
                           prefixIcon: const Icon(Icons.lock_reset_rounded),
                           isDense: true,
-                          suffixIcon: _VisibilityToggle(
+                          suffixIcon: PasswordVisibilityToggle(
                             obscure: _obscureNew,
                             onPressed: () =>
                                 setState(() => _obscureNew = !_obscureNew),
@@ -122,7 +119,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           if (next.length < 8) {
                             return 'Mật khẩu mới phải có ít nhất 8 ký tự.';
                           }
-                          if (_utf8Length(next) > _maxPasswordBytes) {
+                          if (utf8ByteLength(next) > _maxPasswordBytes) {
                             return 'Mật khẩu không được vượt quá '
                                 '$_maxPasswordBytes byte.';
                           }
@@ -144,7 +141,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           labelText: 'Nhập lại mật khẩu mới',
                           prefixIcon: const Icon(Icons.lock_clock_outlined),
                           isDense: true,
-                          suffixIcon: _VisibilityToggle(
+                          suffixIcon: PasswordVisibilityToggle(
                             obscure: _obscureConfirm,
                             onPressed: () => setState(
                               () => _obscureConfirm = !_obscureConfirm,
@@ -219,26 +216,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 }
 
-/// Nút ẩn/hiện mật khẩu dùng chung cho ba ô nhập.
-class _VisibilityToggle extends StatelessWidget {
-  const _VisibilityToggle({required this.obscure, required this.onPressed});
-
-  final bool obscure;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
-      icon: Icon(
-        obscure ? Icons.visibility_off : Icons.visibility,
-        size: 20,
-      ),
-      onPressed: onPressed,
-    );
-  }
-}
-
 /// Nhắc người dùng hệ quả của việc đổi mật khẩu trước khi họ bấm nút.
 class _SessionNotice extends StatelessWidget {
   const _SessionNotice();
@@ -257,7 +234,11 @@ class _SessionNotice extends StatelessWidget {
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 20, color: AppTheme.accentIndigo),
+          Icon(
+            Icons.info_outline_rounded,
+            size: 20,
+            color: AppTheme.accentIndigo,
+          ),
           SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -275,50 +256,3 @@ class _SessionNotice extends StatelessWidget {
     );
   }
 }
-
-/// Khung thông báo lỗi lấy nguyên văn từ backend.
-class _MessageBanner extends StatelessWidget {
-  const _MessageBanner({
-    required this.icon,
-    required this.color,
-    required this.background,
-    required this.message,
-  });
-
-  final IconData icon;
-  final Color color;
-  final Color background;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                color: color,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Đếm byte UTF-8 như ràng buộc `@MaxUtf8Bytes(72)` của backend.
-int _utf8Length(String value) => utf8.encode(value).length;
